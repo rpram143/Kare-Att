@@ -1,0 +1,11 @@
+{
+  "appId": "com.kare.attendance",
+  "appName": "KARE SIS",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http"
+  },
+  "android": {
+    "backgroundColor": "#080c18"
+  }
+}

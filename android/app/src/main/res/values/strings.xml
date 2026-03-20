@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">KARE SIS</string>
+    <string name="title_activity_main">KARE SIS</string>
+    <string name="package_name">com.kare.attendance</string>
+    <string name="custom_url_scheme">com.kare.attendance</string>
+</resources>
