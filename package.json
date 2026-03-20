@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "node proxy.cjs",
     "build": "vite build",
     "preview": "vite preview",
     "android": "npx cap sync android && npx cap open android"
