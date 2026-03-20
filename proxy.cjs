@@ -15,6 +15,9 @@ app.use(cors({
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+// Health check for Render
+app.get('/', (req, res) => res.send('KARE Proxy is Live'));
+
 // Helper to parse/stringify cookie jar from header
 function getJar(req) {
   try {
@@ -37,8 +40,9 @@ function updateJar(jar, setCookies) {
   });
 }
 
-app.all(/(.*)/, async (req, res) => {
+app.use(async (req, res) => {
   const path = req.url;
+  if (path === '/') return; // Handled above
   const jar = getJar(req);
   
   console.log(`[PROXY] ${req.method} ${path}`);
