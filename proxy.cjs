@@ -33,7 +33,7 @@ function updateJar(jar, setCookies) {
   });
 }
 
-app.all('*', async (req, res) => {
+app.all(/(.*)/, async (req, res) => {
   const path = req.url;
   const jar = getJar(req);
   
