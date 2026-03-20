@@ -97,6 +97,13 @@ app.all(/(.*)/, async (req, res) => {
     const resp = await axios(config);
     updateJar(jar, resp.headers['set-cookie']);
     
+    console.log(`  Response: ${resp.status}`);
+    if (typeof resp.data === 'string') {
+      console.log(`  Body length: ${resp.data.length}`);
+    } else {
+      console.log(`  Body: JSON object with keys: ${Object.keys(resp.data || {}).join(', ')}`);
+    }
+    
     res.set('X-Cookie-Jar', JSON.stringify(jar));
     res.status(resp.status).send(resp.data);
 

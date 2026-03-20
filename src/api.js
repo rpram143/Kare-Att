@@ -6,7 +6,10 @@ export const GRADE_PAGE = '/grade'
 export const MIN_ATT    = 75
 export const DAYS       = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 
-export const getBase = () => localStorage.getItem('sis_proxy') || SIS_BASE
+export const getBase = () => {
+  const p = localStorage.getItem('sis_proxy') || SIS_BASE
+  return p.replace(/\/$/, '')
+}
 
 export const saveJar = (resp) => {
   const jar = resp.headers.get('X-Cookie-Jar');
