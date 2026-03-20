@@ -1,0 +1,9 @@
+node_modules/
+dist/
+android/
+.gradle/
+local.properties
+*.apk
+*.html
+*.txt
+.DS_Store

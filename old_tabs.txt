@@ -1,4 +1,0 @@
-      <button class="tab-btn active" onclick="switchTab('att')"  id="tab-att"><span class="tab-icon">📊</span><span>Attendance</span></button>
-      <button class="tab-btn"        onclick="switchTab('marks')" id="tab-marks"><span class="tab-icon">📝</span><span>Marks</span></button>
-      <button class="tab-btn"        onclick="switchTab('cgpa')"  id="tab-cgpa"><span class="tab-icon">🎯</span><span>CGPA</span></button>
-      <button class="tab-btn"        onclick="switchTab('tt')"    id="tab-tt"><span class="tab-icon">🗓️</span><span>Timetable</span></button>
