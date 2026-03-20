@@ -1,35 +1,28 @@
-import { useState, useEffect, useRef } from 'react'
-import { getBase, ATTEND_API, MIN_ATT, attClass } from './api'
+import { useState, useEffect } from 'react'
+import { getBase, ATTEND_API, MIN_ATT, attClass, saveJar } from './api'
+import { motion } from 'framer-motion'
 
-function BarFill({ pct, cls }) {
-  const ref = useRef()
-  useEffect(() => {
-    const t = setTimeout(() => { if (ref.current) ref.current.style.width = pct + '%' }, 150)
-    return () => clearTimeout(t)
-  }, [pct])
-  const colors = {
-    good: 'linear-gradient(90deg,#059669,var(--green))',
-    warn: 'linear-gradient(90deg,#d97706,var(--amber))',
-    bad:  'linear-gradient(90deg,#dc2626,var(--red))'
-  }
-  return (
-    <div style={{ height:4, background:'rgba(255,255,255,0.06)', borderRadius:99, overflow:'hidden', marginBottom:8 }}>
-      <div ref={ref} style={{ height:'100%', borderRadius:99, background:colors[cls], width:0, transition:'width 1s cubic-bezier(.16,1,.3,1)' }} />
-    </div>
-  )
-}
+const BarFill = ({ pct, cls }) => (
+  <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 10, width: '100%', overflow: 'hidden', marginTop: 10 }}>
+    <motion.div
+      initial={{ width: 0 }}
+      animate={{ width: `${pct}%` }}
+      transition={{ duration: 1, ease: "easeOut" }}
+      style={{ height: '100%', borderRadius: 10, background: cls === 'good' ? 'var(--green)' : cls === 'warn' ? 'var(--amber)' : 'var(--red)' }}
+    />
+  </div>
+)
 
 export default function AttendanceTab({ initData }) {
-  const [data,    setData]    = useState(initData)
-  const [loading, setLoading] = useState(false)
-  const [offline, setOffline] = useState(!navigator.onLine)
+  const [data, setData] = useState(initData)
+  const [loading, setLoading] = useState(!initData)
 
-  const refresh = async () => {
+  const load = async () => {
     setLoading(true)
     try {
       const resp = await fetch(`${getBase()}${ATTEND_API}?draw=1&start=0&length=100`, {
-        headers: { 
-          'X-Requested-With': 'XMLHttpRequest', 
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
           'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}'
         }
@@ -39,86 +32,126 @@ export default function AttendanceTab({ initData }) {
       const subjects = (json.data || []).map(r => ({
         name: r.course_name, code: r.course_code,
         present: parseInt(r.present) || 0,
-        total:   parseInt(r.total)   || 0,
-        pct:     parseFloat(r.percentage) || 0,
+        total: parseInt(r.total) || 0,
+        pct: parseFloat(r.percentage) || 0,
       })).filter(s => s.name && s.total > 0)
+
       const result = { subjects, fetchedAt: Date.now() }
       localStorage.setItem('sis_att_cache', JSON.stringify(result))
-      setData(result); setOffline(false)
+      setData(result)
     } catch {
       const c = localStorage.getItem('sis_att_cache')
-      if (c) { setData(JSON.parse(c)); setOffline(true) }
+      if (c) setData(JSON.parse(c))
     } finally { setLoading(false) }
   }
 
+  useEffect(() => { if (!initData) load() }, [])
+
   const { subjects = [], fetchedAt } = data || {}
-  const overall = subjects.length ? Math.round(subjects.reduce((s,x) => s + x.pct, 0) / subjects.length) : 0
-  const oClass  = overall >= 85 ? 'green' : overall >= MIN_ATT ? 'indigo' : 'red'
-
-  let sClass = 'green', sVal = 'Safe', sSub = "You're good"
-  if (overall < 85 && overall >= MIN_ATT) { sClass='amber'; sVal='OK';   sSub=`${overall - MIN_ATT}% margin` }
-  if (overall < MIN_ATT)                  { sClass='red';   sVal='Risk'; sSub=`Below ${MIN_ATT}%` }
-
-  const stripeColor = { good:'var(--green)', warn:'var(--amber)', bad:'var(--red)' }
+  const totalP = subjects.reduce((a, b) => a + b.present, 0)
+  const totalT = subjects.reduce((a, b) => a + b.total, 0)
+  const overall = totalT ? ((totalP / totalT) * 100).toFixed(1) : 0
 
   return (
-    <div style={{ padding:16, paddingBottom:'calc(16px + var(--safe-bottom))' }}>
-      {offline && <div className="offline-banner">Connection lost — showing cached data</div>}
-
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
-        <div className={`stat-card slide-up d1 ${oClass}`}>
-          <div className="stat-label">Overall</div>
-          <div className="stat-value">{overall}%</div>
-          <div className="stat-sub">attendance</div>
+    <div style={{ padding: 20 }}>
+      {/* Stats Overview */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+        <div className={`stat-card slide-up d1 ${overall >= MIN_ATT ? 'green' : 'red'}`}>
+          <div className="stat-label">Overall %</div>
+          <div className="stat-value">{loading ? '…' : overall}</div>
+          <div className="stat-sub">{overall >= MIN_ATT ? 'Safe' : 'Below 75%'}</div>
         </div>
-        <div className={`stat-card slide-up d2 ${sClass}`}>
-          <div className="stat-label">Status</div>
-          <div className="stat-value">{sVal}</div>
-          <div className="stat-sub">{sSub}</div>
+        <div className="stat-card slide-up d2 indigo">
+          <div className="stat-label">Total Subjects</div>
+          <div className="stat-value">{loading ? '…' : subjects.length}</div>
+          <div className="stat-sub">Semester 2024</div>
         </div>
       </div>
 
       <div className="section-hd">
-        <span className="section-title">Subjects</span>
-        <span className="section-badge">{subjects.length} subjects</span>
+        <span className="section-title">Academic Courses</span>
+        <span className="section-badge">{subjects.length} Subjects</span>
       </div>
 
-      <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:20 }}>
-        {subjects.length === 0 && <div className="empty-state"><div className="empty-text">No attendance data found.</div></div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {!loading && subjects.length === 0 && <div className="empty-state"><div className="empty-text">No attendance data found.</div></div>}
+
         {subjects.map((s, i) => {
-          const cls    = attClass(s.pct)
+          const cls = attClass(s.pct)
           const absent = s.total - s.present
+
+          let marginText = "", marginColor = "var(--text-muted)", marginIcon = "ⓘ";
+          if (s.pct >= MIN_ATT) {
+            const maxBunk = Math.floor(s.present / 0.75 - s.total);
+            if (maxBunk > 0) {
+              marginText = `Safe: Bunk ${maxBunk} classes`;
+              marginColor = "var(--green)";
+              marginIcon = "✓";
+            } else {
+              marginText = "Critical: Don't bunk!";
+              marginColor = "var(--amber)";
+              marginIcon = "⚠";
+            }
+          } else {
+            const req = 3 * s.total - 4 * s.present;
+            marginText = `Required: Attend ${req} classes`;
+            marginColor = "var(--red)";
+            marginIcon = "✕";
+          }
+
           return (
-            <div key={i} className={`slide-up d${Math.min(i+1,8)}`} style={{ background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:16, padding:16, position:'relative', overflow:'hidden' }}>
-              <div style={{ position:'absolute', left:0, top:16, bottom:16, width:3, borderRadius:'0 3px 3px 0', background:stripeColor[cls] }} />
-              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, marginBottom:10, paddingLeft:10 }}>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:13, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginBottom:3 }}>{s.name}</div>
-                  {s.code && <div style={{ fontSize:10, fontFamily:'var(--mono)', color:'var(--text-2)' }}>{s.code}</div>}
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="glass-card"
+              style={{ padding: 18, borderLeft: `4px solid ${cls === 'good' ? 'var(--green)' : cls === 'warn' ? 'var(--amber)' : 'var(--red)'}` }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: 'white', lineHeight: 1.4, marginBottom: 4 }}>{s.name}</h3>
+                  <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{s.code}</p>
                 </div>
-                <div style={{ flexShrink:0, textAlign:'right' }}>
-                  <div style={{ fontSize:22, fontWeight:700, fontFamily:'var(--mono)', letterSpacing:'-0.04em', lineHeight:1, color:stripeColor[cls] }}>{s.pct}%</div>
-                  <div style={{ fontSize:9, fontFamily:'var(--mono)', color:'var(--text-3)', textTransform:'uppercase' }}>attended</div>
-                </div>
-              </div>
-              <div style={{ paddingLeft:10 }}>
-                <BarFill pct={s.pct} cls={cls} />
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                  <span className="pill present">✓ {s.present}</span>
-                  <span className="pill absent">✕ {absent}</span>
-                  <span className="pill">{s.total} total</span>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'white', lineHeight: 1 }}>{s.pct}%</div>
+                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginTop: 4 }}>Attendance</div>
                 </div>
               </div>
-            </div>
+
+              <BarFill pct={s.pct} cls={cls} />
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <span className="pill present">P: {s.present}</span>
+                  <span className="pill absent">A: {absent}</span>
+                  <span className="pill">T: {s.total}</span>
+                </div>
+
+                <div style={{
+                  padding: '6px 10px',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${marginColor}33`,
+                  borderRadius: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  <span style={{ fontSize: 12, color: marginColor }}>{marginIcon}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: marginColor, fontFamily: 'var(--font-mono)' }}>{marginText}</span>
+                </div>
+              </div>
+            </motion.div>
           )
         })}
       </div>
 
-      <button className="btn-refresh" onClick={refresh}>
+      <button className="btn-refresh" onClick={load} style={{ marginTop: 24 }}>
         <span className={loading ? 'spin' : ''}>↻</span>
-        <span>{loading ? 'Refreshing…' : 'Refresh'}</span>
+        <span>{loading ? 'Refreshing Attendance…' : 'Sync Attendance'}</span>
       </button>
-      {fetchedAt && <div className="last-updated">Updated {new Date(fetchedAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</div>}
+
+      {fetchedAt && <div className="last-updated">Last sync: {new Date(fetchedAt).toLocaleTimeString()}</div>}
     </div>
   )
 }

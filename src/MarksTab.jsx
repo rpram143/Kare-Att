@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { getBase, MARKS_API, saveJar } from './api'
+import { motion } from 'framer-motion'
 
 export default function MarksTab() {
-  const [data,    setData]    = useState(null)
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState(false)
+  const [error, setError] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -12,8 +13,8 @@ export default function MarksTab() {
     setLoading(true); setError(false)
     try {
       const resp = await fetch(`${getBase()}${MARKS_API}?draw=1&start=0&length=100`, {
-        headers: { 
-          'X-Requested-With': 'XMLHttpRequest', 
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
           'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}'
         }
@@ -34,52 +35,69 @@ export default function MarksTab() {
   const marks = data?.marks || []
 
   return (
-    <div style={{ padding:16, paddingBottom:'calc(16px + var(--safe-bottom))' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
+    <div style={{ padding: 20 }}>
+      {/* Background Decor */}
+      <div className="bg-orbs">
+        <div className="orb orb-2" />
+        <div className="orb orb-3" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
         <div className="stat-card slide-up d1 cyan">
           <div className="stat-label">Enrolled</div>
           <div className="stat-value">{loading ? '…' : marks.length}</div>
-          <div className="stat-sub">subjects</div>
+          <div className="stat-sub">Subjects</div>
         </div>
         <div className="stat-card slide-up d2 indigo">
-          <div className="stat-label">Source</div>
-          <div className="stat-value" style={{ fontSize:18 }}>Portal</div>
-          <div className="stat-sub">KARE SIS</div>
+          <div className="stat-label">Current Sem</div>
+          <div className="stat-value" style={{ fontSize: 24 }}>2024</div>
+          <div className="stat-sub">Winter</div>
         </div>
       </div>
 
       <div className="section-hd">
-        <span className="section-title">Subjects</span>
-        <span className="section-badge">{marks.length} enrolled</span>
+        <span className="section-title">Course Enrollment</span>
+        <span className="section-badge">{marks.length} Total</span>
       </div>
 
-      <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:20 }}>
-        {loading && <div className="empty-state"><div className="empty-text">Loading…</div></div>}
-        {error   && <div className="empty-state"><div className="empty-text">Could not load. Check proxy.</div></div>}
-        {!loading && !error && marks.length === 0 && <div className="empty-state"><div className="empty-text">No marks data found.</div></div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {loading && <div className="empty-state"><div className="empty-text">Loading enrolled courses…</div></div>}
+        {error && <div className="empty-state"><div className="empty-text">Could not load. Check proxy.</div></div>}
+        {!loading && !error && marks.length === 0 && <div className="empty-state"><div className="empty-text">No courses found for this semester.</div></div>}
+
         {marks.map((m, i) => (
-          <div key={i} className={`slide-up d${Math.min(i+1,8)}`} style={{ background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:16, padding:16 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10, marginBottom:8 }}>
-              <div>
-                <div style={{ fontSize:13, fontWeight:600 }}>{m.name}</div>
-                {m.code && <div style={{ fontSize:10, fontFamily:'var(--mono)', color:'var(--text-2)', marginTop:2 }}>{m.code}</div>}
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="glass-card"
+            style={{ padding: 18 }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 13, fontWeight: 700, color: 'white', lineHeight: 1.4 }}>{m.name}</h3>
+                <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: 4 }}>{m.code}</p>
               </div>
-              <div style={{ background:'var(--bg-card2)', border:'1px solid var(--border)', borderRadius:10, padding:'0 10px', height:36, display:'grid', placeItems:'center', fontSize:10, fontFamily:'var(--mono)', color:'var(--text-2)', flexShrink:0 }}>
-                Enrolled
+              <div className="section-badge" style={{ flexShrink: 0, background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)' }}>
+                Active
               </div>
             </div>
-            <div style={{ fontSize:11, fontFamily:'var(--mono)', color:'var(--text-3)' }}>
-              Open portal to view detailed exam scores →
+
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Internal Marks</span>
+              <span style={{ fontSize: 11, color: 'var(--accent-light)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>View Details →</span>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      <button className="btn-refresh" onClick={load}>
+      <button className="btn-refresh" onClick={load} style={{ marginTop: 24, position: 'relative', zIndex: 1 }}>
         <span className={loading ? 'spin' : ''}>↻</span>
-        <span>{loading ? 'Refreshing…' : 'Refresh'}</span>
+        <span>{loading ? 'Refreshing Courses…' : 'Sync Courses'}</span>
       </button>
-      {data?.fetchedAt && <div className="last-updated">Updated {new Date(data.fetchedAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</div>}
+
+      {data?.fetchedAt && <div className="last-updated">Last sync: {new Date(data.fetchedAt).toLocaleTimeString()}</div>}
     </div>
   )
 }
