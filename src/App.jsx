@@ -73,7 +73,7 @@ export default function App() {
   }
 
   const logout = () => {
-    ['sis_reg','sis_pass','sis_name','sis_att_cache','sis_marks_cache','sis_cgpa_cache'].forEach(k => localStorage.removeItem(k))
+    ['sis_reg','sis_pass','sis_name','sis_att_cache','sis_marks_cache','sis_cgpa_cache','sis_jar'].forEach(k => localStorage.removeItem(k))
     setLoggedIn(false); setStudentName(''); setAttData(null); setActiveTab('att')
   }
 

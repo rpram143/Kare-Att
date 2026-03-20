@@ -45,8 +45,13 @@ export default function CgpaTab() {
     setLoading(true)
     try {
       const resp = await fetch(`${getBase()}${GRADE_PAGE}`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html,*/*' }
+        headers: { 
+          'X-Requested-With': 'XMLHttpRequest', 
+          Accept: 'text/html,*/*',
+          'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}'
+        }
       })
+      saveJar(resp)
       const html = await resp.text()
       const doc  = new DOMParser().parseFromString(html, 'text/html')
       const result = { ...parseCgpaHtml(doc), fetchedAt: Date.now() }

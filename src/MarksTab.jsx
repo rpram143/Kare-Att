@@ -12,8 +12,13 @@ export default function MarksTab() {
     setLoading(true); setError(false)
     try {
       const resp = await fetch(`${getBase()}${MARKS_API}?draw=1&start=0&length=100`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' }
+        headers: { 
+          'X-Requested-With': 'XMLHttpRequest', 
+          Accept: 'application/json',
+          'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}'
+        }
       })
+      saveJar(resp)
       const json = await resp.json()
       const marks = (json.data || []).map(r => ({ name: r.course_name || '', code: r.course_code || '' })).filter(m => m.name)
       const result = { marks, fetchedAt: Date.now() }
