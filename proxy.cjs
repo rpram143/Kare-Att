@@ -7,7 +7,11 @@ const app = express();
 const PORT = process.env.PORT || 8010;
 const TARGET = 'https://sis.kalasalingam.ac.in';
 
-app.use(cors({ origin: '*', credentials: true }));
+app.use(cors({ 
+  origin: '*', 
+  credentials: true,
+  exposedHeaders: ['X-Cookie-Jar']
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
