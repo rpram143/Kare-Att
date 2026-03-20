@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getBase, GRADE_PAGE, gradeColor } from './api'
+import { getBase, GRADE_PAGE, gradeColor, saveJar } from './api'
 
 function parseCgpaHtml(doc) {
   let cgpa = null, earnedCredits = null, arrears = null
