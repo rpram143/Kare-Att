@@ -64,7 +64,7 @@ export default function AttendanceTab({ initData }) {
         <div className="stat-card slide-up d2 indigo">
           <div className="stat-label">Total Subjects</div>
           <div className="stat-value">{loading ? '…' : subjects.length}</div>
-          <div className="stat-sub">Semester 2024</div>
+          <div className="stat-sub">Live SIS data</div>
         </div>
       </div>
 

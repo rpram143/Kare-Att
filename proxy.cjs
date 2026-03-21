@@ -77,7 +77,8 @@ app.use(async (req, res) => {
       // Step C: If redirect, follow it internally to get user data (name)
       let finalData = loginResp.data;
       if (loginResp.status === 302 && loginResp.headers['location']) {
-        const homeResp = await axios.get(loginResp.headers['location'], {
+        const redirectUrl = new URL(loginResp.headers['location'], TARGET).toString();
+        const homeResp = await axios.get(redirectUrl, {
           headers: { 'Cookie': jarToString(jar), 'User-Agent': req.headers['user-agent'] }
         });
         updateJar(jar, homeResp.headers['set-cookie']);

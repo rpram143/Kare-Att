@@ -9,9 +9,13 @@ export const MIN_ATT = 75
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export const getBase = () => {
-  // If no proxy is set, default to localhost:8010 to avoid direct CORS issues with the SIS server
-  const p = localStorage.getItem('sis_proxy') || 'http://localhost:8010'
-  return p.replace(/\/$/, '')
+  // If no proxy is set, default to SIS directly on native, or a local proxy on web
+  const p = localStorage.getItem('sis_proxy')
+  if (p) return p.replace(/\/$/, '')
+
+  // If we are on web and haven't set a proxy, we probably need one
+  // but let's default to a sane behavior: the real SIS URL
+  return SIS_BASE
 }
 
 export const saveJar = (resp) => {

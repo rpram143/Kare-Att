@@ -1,31 +1,52 @@
-import { useState } from 'react'
-import { getBase, LOGIN_PATH, ATTEND_API } from './api'
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { getBase, LOGIN_PATH } from './api'
 import Logo from './Logo'
 
 export default function LoginScreen({ onLogin }) {
   const [regNo, setRegNo] = useState(localStorage.getItem('sis_reg') || '')
-  const [pass, setPass] = useState(localStorage.getItem('sis_pass') ? atob(localStorage.getItem('sis_pass')) : '')
-  const [save, setSave] = useState(true)
+  const [pass, setPass] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showProxy, setShowProxy] = useState(false)
   const [proxyUrl, setProxyUrl] = useState(localStorage.getItem('sis_proxy') || '')
 
-  const saveProxy = () => {
-    const val = proxyUrl.trim().replace(/\/$/, '')
-    localStorage.setItem('sis_proxy', val)
-    setShowProxy(false)
-  }
+  useEffect(() => {
+    localStorage.removeItem('sis_pass')
+  }, [])
 
   const doLogin = async () => {
     if (!regNo || !pass) { setError('Enter your register number and password.'); return }
     setError(''); setLoading(true)
     try {
-      const resp = await fetch(getBase() + LOGIN_PATH, {
+      const base = getBase();
+      const loginUrl = base + LOGIN_PATH;
+
+      // Step 1: GET /login to establish session and get XSRF token
+      const prepResp = await fetch(loginUrl, {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}'
+        }
+      });
+      const prepJarStr = prepResp.headers.get('X-Cookie-Jar');
+      if (prepJarStr) localStorage.setItem('sis_jar', prepJarStr);
+
+      // Attempt to extract XSRF token from the jar for standard POST CSRF protection
+      let xsrf = "";
+      try {
+        const jar = JSON.parse(localStorage.getItem('sis_jar') || '{}');
+        if (jar['XSRF-TOKEN']) xsrf = decodeURIComponent(jar['XSRF-TOKEN']);
+      } catch (e) { /* Best effort: proceed without token if parsing fails */ }
+
+      // Step 2: POST credentials with the session cookie
+      const resp = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}'
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}',
+          'X-XSRF-TOKEN': xsrf
         },
         body: new URLSearchParams({ register_no: regNo, password: pass }).toString(),
       })
@@ -34,18 +55,26 @@ export default function LoginScreen({ onLogin }) {
       if (newJar) localStorage.setItem('sis_jar', newJar);
 
       const html = await resp.text()
-      if (html.includes('Login - SIS') || html.includes('Invalid') || html.includes('incorrect'))
-        throw new Error('Invalid register number or password.')
+      if (!resp.ok) {
+        throw new Error('SIS connection failed. (HTTP ' + resp.status + ')')
+      }
 
       const doc = new DOMParser().parseFromString(html, 'text/html')
-      const nEl = doc.querySelector('.navbar-right li a, nav .dropdown-toggle, .user-panel .info p')
-      const name = nEl ? nEl.textContent.trim().replace(/\s+/g, ' ') : regNo
+      const hasLoginForm =
+        !!doc.querySelector('form[action*="/login"], input[name="register_no"], input[name="password"]')
+      const authError =
+        doc.querySelector('.alert-danger, .invalid-feedback, .error, .help-block.text-danger')?.textContent?.trim() || ''
+      const nameEl = doc.querySelector('.navbar-right li a, nav .dropdown-toggle, .user-panel .info p')
 
-      if (html.includes('Invalid') || html.includes('login')) {
-        throw new Error('Invalid credentials or session error')
+      if (hasLoginForm && !nameEl) {
+        throw new Error(authError || 'Invalid register number or password.')
       }
+
+      if (!nameEl) {
+        throw new Error('Login succeeded, but the SIS home page could not be verified.')
+      }
+
       localStorage.setItem('sis_reg', regNo)
-      localStorage.setItem('sis_pass', pass)
       onLogin(html)
     } catch (err) {
       setError(err.message || 'Login failed. Check your network or proxy.')

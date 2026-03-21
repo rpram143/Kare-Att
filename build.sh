@@ -74,9 +74,11 @@ echo "   ✓ Capacitor synced"
 echo "▶ Step 6/6: Building APK with Gradle..."
 cd "$PROJECT/android"
 
+# Set explicit JDK for 21 compatibility (using 25 which supports 21)
+export JAVA_HOME="/usr/lib/jvm/java-25-openjdk"
 export ANDROID_HOME="$SDK_DST"
 export ANDROID_SDK_ROOT="$SDK_DST"
-export PATH="$SDK_DST/platform-tools:$SDK_DST/cmdline-tools/latest/bin:$PATH"
+export PATH="$JAVA_HOME/bin:$SDK_DST/platform-tools:$SDK_DST/cmdline-tools/latest/bin:$PATH"
 
 chmod +x gradlew
 ./gradlew assembleDebug --no-daemon 2>&1

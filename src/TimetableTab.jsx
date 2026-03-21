@@ -19,12 +19,14 @@ export default function TimetableTab() {
   const [ttDay, setTtDay] = useState(DAYS[new Date().getDay() - 1] || 'Monday')
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState({ type: '', message: '' })
   const [form, setForm] = useState({ subject: '', day: 'Monday', start: '09:00', end: '10:00', room: '', color: '#6366f1' })
 
   const save = (updated) => { setTtData(updated); localStorage.setItem('sis_tt', JSON.stringify(updated)) }
 
   const syncFromSIS = async () => {
     setLoading(true)
+    setStatus({ type: '', message: '' })
     try {
       const resp = await fetch(`${getBase()}${REG_PAGE}`, {
         headers: {
@@ -51,35 +53,59 @@ export default function TimetableTab() {
         if (!subject || !slotRaw) return
 
         const slotParts = slotRaw.split(/[,/ ]+/).filter(Boolean)
+        let lastDay = null;
+
         slotParts.forEach(p => {
-          const match = p.match(/(MON|TUE|WED|THU|FRI|SAT)(\d+)/i)
+          // Check for Day + Slot (e.g., MON1, MON1-2)
+          const match = p.match(/^([A-Z]{3})(\d+)(?:-(\d+))?$/i);
           if (match) {
-            const dayMap = { MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday', SAT: 'Saturday' }
-            const day = dayMap[match[1].toUpperCase()]
-            const time = SLOT_MAP[match[2]]
-            if (day && time) {
-              if (!newTt[day]) newTt[day] = []
-              newTt[day].push({
-                subject,
-                start: time.start,
-                end: time.end,
-                room,
-                color: `hsl(${(newTt[day]?.length || 0) * 40 + 200}, 70%, 60%)`
-              })
+            const dayCode = match[1].toUpperCase();
+            const dayName = { MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday', SAT: 'Saturday' }[dayCode];
+            if (dayName) {
+              lastDay = dayName;
+              const startSlot = parseInt(match[2]);
+              const endSlot = match[3] ? parseInt(match[3]) : startSlot;
+              for (let s = startSlot; s <= endSlot; s++) {
+                addSlotToTt(newTt, dayName, String(s), subject, room);
+              }
+            }
+          } else if (lastDay) {
+            // Check for trailing slots (e.g., 2 in MON1,2)
+            const numMatch = p.match(/^(\d+)(?:-(\d+))?$/);
+            if (numMatch) {
+              const startSlot = parseInt(numMatch[1]);
+              const endSlot = numMatch[2] ? parseInt(numMatch[2]) : startSlot;
+              for (let s = startSlot; s <= endSlot; s++) {
+                addSlotToTt(newTt, lastDay, String(s), subject, room);
+              }
             }
           }
         })
       })
 
+      // Helper for adding slot to transient timetable object
+      function addSlotToTt(tt, day, slotNum, subject, room) {
+        const time = SLOT_MAP[slotNum];
+        if (!time) return;
+        if (!tt[day]) tt[day] = [];
+        tt[day].push({
+          subject,
+          start: time.start,
+          end: time.end,
+          room,
+          color: `hsl(${(tt[day].length) * 40 + 200}, 70%, 60%)`
+        });
+      }
+
       if (Object.keys(newTt).length > 0) {
         save(newTt)
-        alert('Timetable synced successfully!')
+        setStatus({ type: 'success', message: 'Timetable synced successfully.' })
       } else {
         throw new Error('No timetable data found on the registration page.')
       }
     } catch (err) {
       console.error(err)
-      alert(err.message || 'Sync failed. Ensure you are logged in.')
+      setStatus({ type: 'error', message: err.message || 'Sync failed. Ensure you are logged in.' })
     } finally {
       setLoading(false)
     }
@@ -143,6 +169,12 @@ export default function TimetableTab() {
         ))}
       </div>
 
+      {status.message && (
+        <div className={status.type === 'error' ? 'status-banner error' : 'status-banner success'}>
+          {status.message}
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         <motion.div
           key={ttDay}
@@ -166,8 +198,8 @@ export default function TimetableTab() {
                 <h3 style={{ fontSize: 14, fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.subject}</h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   {s.room && <span style={{ fontSize: 11, color: 'var(--accent-light)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>📍 {s.room}</span>}
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>•</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Sem 2024</span>
+                  {s.room && <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>•</span>}
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Scheduled class</span>
                 </div>
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'white', flexShrink: 0, textAlign: 'right', fontWeight: 600 }}>

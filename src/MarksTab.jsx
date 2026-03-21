@@ -33,6 +33,7 @@ export default function MarksTab() {
   }
 
   const marks = data?.marks || []
+  const syncedAt = data?.fetchedAt ? new Date(data.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Waiting'
 
   return (
     <div style={{ padding: 20 }}>
@@ -49,9 +50,9 @@ export default function MarksTab() {
           <div className="stat-sub">Subjects</div>
         </div>
         <div className="stat-card slide-up d2 indigo">
-          <div className="stat-label">Current Sem</div>
-          <div className="stat-value" style={{ fontSize: 24 }}>2024</div>
-          <div className="stat-sub">Winter</div>
+          <div className="stat-label">Last Sync</div>
+          <div className="stat-value" style={{ fontSize: 24 }}>{loading ? '…' : syncedAt}</div>
+          <div className="stat-sub">From SIS</div>
         </div>
       </div>
 
