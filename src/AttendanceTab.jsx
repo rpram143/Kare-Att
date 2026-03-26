@@ -3,28 +3,68 @@ import { getBase, ATTEND_API, MIN_ATT, attClass, saveJar } from './api'
 import { motion } from 'framer-motion'
 
 const BarFill = ({ pct, cls }) => (
-  <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 10, width: '100%', overflow: 'hidden', marginTop: 10 }}>
-    <motion.div
-      initial={{ width: 0 }}
-      animate={{ width: `${pct}%` }}
-      transition={{ duration: 1, ease: "easeOut" }}
-      style={{ height: '100%', borderRadius: 10, background: cls === 'good' ? 'var(--green)' : cls === 'warn' ? 'var(--amber)' : 'var(--red)' }}
-    />
+  <div style={{ position: 'relative', marginTop: 12 }}>
+    <div style={{ height: 10, background: 'var(--surface-highest)', borderRadius: 12, width: '100%', overflow: 'hidden', position: 'relative', border: '1px solid var(--border)' }}>
+      {/* 75% Threshold Marker */}
+      <div style={{
+        position: 'absolute',
+        left: '75%',
+        top: 0,
+        bottom: 0,
+        width: 1,
+        background: 'rgba(255,255,255,0.2)',
+        zIndex: 2,
+        borderLeft: '1px dashed rgba(255,255,255,0.4)'
+      }} />
+
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: 1.2, ease: [0.34, 1.56, 0.64, 1] }}
+        style={{
+          height: '100%',
+          borderRadius: 12,
+          background: cls === 'good' ? 'var(--success)' : cls === 'warn' ? 'var(--warning)' : 'var(--error)',
+          boxShadow: `0 0 16px ${cls === 'good' ? 'var(--primary-glow)' : 'rgba(255,185,95,0.2)'}`
+        }}
+      />
+    </div>
+    <div style={{
+      position: 'absolute',
+      left: '75%',
+      top: -14,
+      fontSize: 8,
+      fontWeight: 800,
+      color: 'var(--text-muted)',
+      fontFamily: 'var(--font-mono)',
+      transform: 'translateX(-50%)',
+      letterSpacing: '0.05em'
+    }}>
+      75% LIMIT
+    </div>
   </div>
 )
 
-export default function AttendanceTab({ initData }) {
+export default function AttendanceTab({ initData, refreshKey }) {
   const [data, setData] = useState(initData)
   const [loading, setLoading] = useState(!initData)
 
   const load = async () => {
     setLoading(true)
     try {
+      const jarStr = localStorage.getItem('sis_jar') || '{}';
+      let xsrf = "";
+      try {
+        const jar = JSON.parse(jarStr);
+        if (jar['XSRF-TOKEN']) xsrf = decodeURIComponent(jar['XSRF-TOKEN']);
+      } catch (e) { }
+
       const resp = await fetch(`${getBase()}${ATTEND_API}?draw=1&start=0&length=100`, {
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
-          'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}'
+          'X-Cookie-Jar': jarStr,
+          'X-XSRF-TOKEN': xsrf
         }
       })
       saveJar(resp)
@@ -45,7 +85,9 @@ export default function AttendanceTab({ initData }) {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { if (!initData) load() }, [])
+  useEffect(() => {
+    if (!initData || refreshKey > 0) load()
+  }, [refreshKey])
 
   const { subjects = [], fetchedAt } = data || {}
   const totalP = subjects.reduce((a, b) => a + b.present, 0)
@@ -53,92 +95,111 @@ export default function AttendanceTab({ initData }) {
   const overall = totalT ? ((totalP / totalT) * 100).toFixed(1) : 0
 
   return (
-    <div style={{ padding: 20 }}>
-      {/* Stats Overview */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-        <div className={`stat-card slide-up d1 ${overall >= MIN_ATT ? 'green' : 'red'}`}>
-          <div className="stat-label">Overall %</div>
-          <div className="stat-value">{loading ? '…' : overall}</div>
-          <div className="stat-sub">{overall >= MIN_ATT ? 'Safe' : 'Below 75%'}</div>
+    <div style={{ padding: '0 0 24px' }}>
+      {/* Hero Overview */}
+      <div className="hero-card slide-up d1" style={{ marginBottom: 24, padding: '40px 24px' }}>
+        <div className="stat-label">System-Wide Attendance</div>
+        <div className="stat-value" style={{ fontSize: 56, color: 'var(--primary)', margin: '12px 0' }}>{loading ? '…' : overall}%</div>
+        <div className={`pill ${overall >= MIN_ATT ? 'pill-success' : 'pill-error'}`} style={{ display: 'inline-block', fontSize: 13, padding: '8px 16px' }}>
+          {loading ? 'CALCULATING…' : overall >= MIN_ATT ? 'REGISTRY STATUS: SAFE' : 'REGISTRY STATUS: CRITICAL'}
         </div>
-        <div className="stat-card slide-up d2 indigo">
-          <div className="stat-label">Total Subjects</div>
+      </div>
+
+      <div className="grid-2 slide-up d2" style={{ marginBottom: 32 }}>
+        <div className="stat-card">
+          <div className="stat-label">Total Credits</div>
+          <div className="stat-value">{loading ? '…' : subjects.length * 3}</div>
+          <div className="item-sub" style={{ opacity: 0.6 }}>Estimated Load</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Active Courses</div>
           <div className="stat-value">{loading ? '…' : subjects.length}</div>
-          <div className="stat-sub">Live SIS data</div>
+          <div className="item-sub" style={{ opacity: 0.6 }}>Current Semester</div>
         </div>
       </div>
 
-      <div className="section-hd">
-        <span className="section-title">Academic Courses</span>
-        <span className="section-badge">{subjects.length} Subjects</span>
+      <div className="section-hd" style={{ padding: '0 4px', marginBottom: 20 }}>
+        <h2 className="display-txt" style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Academic Folio</h2>
+        <div style={{ width: 40, height: 1, background: 'var(--border)' }} />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {!loading && subjects.length === 0 && <div className="empty-state"><div className="empty-text">No attendance data found.</div></div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {!loading && subjects.length === 0 && (
+          <div className="text-center" style={{ padding: '60px 20px', opacity: 0.5 }}>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>No archival data retrieved for this session.</p>
+          </div>
+        )}
 
         {subjects.map((s, i) => {
           const cls = attClass(s.pct)
           const absent = s.total - s.present
 
-          let marginText = "", marginColor = "var(--text-muted)", marginIcon = "ⓘ";
+          let insightLabel = "", insightColor = "var(--text-muted)", statusType = "pill-success";
           if (s.pct >= MIN_ATT) {
             const maxBunk = Math.floor(s.present / 0.75 - s.total);
             if (maxBunk > 0) {
-              marginText = `Safe: Bunk ${maxBunk} classes`;
-              marginColor = "var(--green)";
-              marginIcon = "✓";
+              insightLabel = `Safe to forfeit ${maxBunk} sessions`;
+              insightColor = "var(--primary)";
+              statusType = "pill-success";
             } else {
-              marginText = "Critical: Don't bunk!";
-              marginColor = "var(--amber)";
-              marginIcon = "⚠";
+              insightLabel = "Zero margin: Attend all sessions";
+              insightColor = "var(--tertiary)";
+              statusType = "pill-warning";
             }
           } else {
             const req = 3 * s.total - 4 * s.present;
-            marginText = `Required: Attend ${req} classes`;
-            marginColor = "var(--red)";
-            marginIcon = "✕";
+            insightLabel = `Immediate: Attend ${req} sessions`;
+            insightColor = "var(--error)";
+            statusType = "pill-error";
           }
 
           return (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
+              transition={{ delay: i * 0.05 + 0.3 }}
               className="glass-card"
-              style={{ padding: 18, borderLeft: `4px solid ${cls === 'good' ? 'var(--green)' : cls === 'warn' ? 'var(--amber)' : 'var(--red)'}` }}
+              style={{ padding: 20, borderLeft: `2px solid ${insightColor}` }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ fontSize: 13, fontWeight: 700, color: 'white', lineHeight: 1.4, marginBottom: 4 }}>{s.name}</h3>
-                  <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{s.code}</p>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)', marginBottom: 4 }}>{s.name}</h3>
+                  <code style={{ fontSize: 11, color: 'var(--text-muted)', opacity: 0.8 }}>{s.code}</code>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'white', lineHeight: 1 }}>{s.pct}%</div>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginTop: 4 }}>Attendance</div>
+                  <div className="display-txt" style={{ fontSize: 24, color: 'var(--text-main)' }}>{s.pct}%</div>
+                  <div className={`pill ${statusType}`} style={{ fontSize: 9, marginTop: 6 }}>{cls.toUpperCase()}</div>
                 </div>
               </div>
 
               <BarFill pct={s.pct} cls={cls} />
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <span className="pill present">P: {s.present}</span>
-                  <span className="pill absent">A: {absent}</span>
-                  <span className="pill">T: {s.total}</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 24 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                    P: <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{s.present}</span>
+                  </div>
+                  <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                    A: <span style={{ color: 'var(--error)', fontWeight: 700 }}>{absent}</span>
+                  </div>
+                  <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                    T: <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{s.total}</span>
+                  </div>
                 </div>
 
                 <div style={{
-                  padding: '6px 10px',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${marginColor}33`,
-                  borderRadius: 10,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: insightColor,
+                  fontFamily: 'var(--font-display)',
+                  letterSpacing: '0.01em',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6
                 }}>
-                  <span style={{ fontSize: 12, color: marginColor }}>{marginIcon}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: marginColor, fontFamily: 'var(--font-mono)' }}>{marginText}</span>
+                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: insightColor }} />
+                  {insightLabel}
                 </div>
               </div>
             </motion.div>
@@ -146,12 +207,22 @@ export default function AttendanceTab({ initData }) {
         })}
       </div>
 
-      <button className="btn-refresh" onClick={load} style={{ marginTop: 24 }}>
-        <span className={loading ? 'spin' : ''}>↻</span>
-        <span>{loading ? 'Refreshing Attendance…' : 'Sync Attendance'}</span>
-      </button>
+      <div style={{ padding: '0 4px', marginTop: 32 }}>
+        <button className="btn-secondary" onClick={load} disabled={loading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <span className={loading ? 'loader' : ''} style={loading ? { width: 14, height: 14, borderWidth: 2 } : {}}>
+            {!loading && '↻'}
+          </span>
+          <span>{loading ? 'ARCHIVING LIVE DATA…' : 'SYNCHRONIZE REGISTRY'}</span>
+        </button>
+      </div>
 
-      {fetchedAt && <div className="last-updated">Last sync: {new Date(fetchedAt).toLocaleTimeString()}</div>}
+      {fetchedAt && (
+        <div className="text-center" style={{ marginTop: 24, opacity: 0.4 }}>
+          <p style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
+            LAST RETRIEVAL: {new Date(fetchedAt).toLocaleTimeString().toUpperCase()}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

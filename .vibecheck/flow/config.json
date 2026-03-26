@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "projectName": "Kare-Att",
+  "userName": "developer",
+  "skillLevel": "intermediate",
+  "outputFolder": ".vibecheck/flow",
+  "planningArtifacts": ".vibecheck/flow/planning-artifacts",
+  "implementationArtifacts": ".vibecheck/flow/implementation-artifacts",
+  "installedAt": "2026-03-26T15:10:04.158Z",
+  "ide": [
+    "claude-code"
+  ]
+}

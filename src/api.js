@@ -19,8 +19,18 @@ export const getBase = () => {
 }
 
 export const saveJar = (resp) => {
-  const jar = resp.headers.get('X-Cookie-Jar');
-  if (jar) localStorage.setItem('sis_jar', jar);
+  const newJarStr = resp.headers.get('X-Cookie-Jar');
+  if (!newJarStr) return;
+
+  try {
+    const oldJar = JSON.parse(localStorage.getItem('sis_jar') || '{}');
+    const newJar = JSON.parse(newJarStr);
+    const merged = { ...oldJar, ...newJar };
+    localStorage.setItem('sis_jar', JSON.stringify(merged));
+  } catch (e) {
+    // Fallback if parsing fails
+    localStorage.setItem('sis_jar', newJarStr);
+  }
 }
 
 export const fmt12 = (t) => {
@@ -30,14 +40,14 @@ export const fmt12 = (t) => {
 }
 
 export const gradeColor = (g) => {
-  if (!g) return 'var(--text-2)'
+  if (!g) return 'var(--text-muted)'
   const s = g.trim().toUpperCase()
-  if (s === 'O') return 'var(--green)'
-  if (s === 'A+' || s === 'A') return 'var(--accent2)'
-  if (s === 'B+' || s === 'B') return 'var(--cyan)'
-  if (s === 'C' || s === 'D') return 'var(--amber)'
-  if (s === 'F' || s === 'U') return 'var(--red)'
-  return 'var(--text-2)'
+  if (s === 'O') return 'var(--success)'
+  if (s === 'A+' || s === 'A') return 'var(--primary)'
+  if (s === 'B+' || s === 'B') return 'var(--secondary)'
+  if (s === 'C' || s === 'D') return 'var(--warning)'
+  if (s === 'F' || s === 'U') return 'var(--error)'
+  return 'var(--text-main)'
 }
 
 export const attClass = (pct) => pct >= 85 ? 'good' : pct >= MIN_ATT ? 'warn' : 'bad'

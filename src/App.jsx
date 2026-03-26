@@ -47,8 +47,8 @@ const TABS = [
 ]
 
 const Loader = () => (
-  <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-    <div style={{ width: 36, height: 36, border: '2px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
+  <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}>
+    <div className="loader" />
   </div>
 )
 
@@ -58,6 +58,8 @@ export default function App() {
   const [studentName, setStudentName] = useState('')
   const [attData, setAttData] = useState(null)
   const [activeTab, setActiveTab] = useState('att')
+
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Load from cache on start
   useEffect(() => {
@@ -73,6 +75,15 @@ export default function App() {
 
     return () => clearTimeout(splashTimer)
   }, [])
+
+  // Auto-refresh timer every 30 minutes
+  useEffect(() => {
+    if (!loggedIn) return
+    const interval = setInterval(() => {
+      setRefreshKey(prev => prev + 1)
+    }, 30 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [loggedIn])
 
   const handleLogin = (html) => {
     const doc = new DOMParser().parseFromString(html, 'text/html')
@@ -96,8 +107,7 @@ export default function App() {
       <SplashScreen show={loading} />
 
       {!loading && (
-        <div style={{ minHeight: '100svh', background: 'var(--bg)', color: 'white', position: 'relative', overflow: 'hidden' }}>
-
+        <div className="app-shell">
           {/* Background Decor */}
           <div className="bg-orbs">
             <div className="orb orb-1" />
@@ -109,15 +119,14 @@ export default function App() {
           {!loggedIn ? (
             <LoginScreen onLogin={handleLogin} />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100svh', position: 'relative', zIndex: 1 }}>
-
+            <>
               {/* Topbar */}
-              <div style={{
+              <header style={{
                 position: 'sticky',
                 top: 0,
                 zIndex: 50,
                 padding: 'calc(var(--safe-top) + 16px) 20px 16px',
-                background: 'rgba(6, 14, 32, 0.7)',
+                background: 'rgba(4, 19, 41, 0.7)',
                 backdropFilter: 'blur(30px)',
                 borderBottom: '1px solid var(--border)',
                 display: 'flex',
@@ -125,116 +134,75 @@ export default function App() {
                 justifyContent: 'space-between'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Logo size={36} />
+                  <Logo size={32} />
                   <div>
-                    <h1 style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', color: 'white' }}>{studentName}</h1>
-                    <div style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Academic Profile</div>
+                    <h1 style={{ fontSize: 16, color: 'var(--text-main)' }}>{studentName}</h1>
+                    <div style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Academic Portal</div>
                   </div>
                 </div>
                 <button
                   onClick={logout}
                   style={{
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'var(--surface-hi)',
                     border: '1px solid var(--border)',
-                    borderRadius: 12,
+                    borderRadius: 10,
                     color: 'var(--text-secondary)',
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: 700,
-                    padding: '8px 12px',
+                    padding: '6px 12px',
                     cursor: 'pointer'
                   }}
                 >
-                  LOGOUT
+                  EXIT
                 </button>
-              </div>
+              </header>
 
-              {/* Swipeable Tabs Container */}
-              <div style={{ flex: 1, position: 'relative', overflowX: 'hidden' }}>
+              {/* Main Feed */}
+              <main className="scroll-container">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={activeTab}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.4}
-                    onDragEnd={(e, { offset, velocity }) => {
-                      const swipe = offset.x;
-                      const vel = velocity.x;
-                      if (swipe < -100 || vel < -500) {
-                        if (activeIndex < TABS.length - 1) setActiveTab(TABS[activeIndex + 1].id)
-                      } else if (swipe > 100 || vel > 500) {
-                        if (activeIndex > 0) setActiveTab(TABS[activeIndex - 1].id)
-                      }
-                    }}
-                    style={{
-                      height: '100%',
-                      overflowY: 'auto',
-                      paddingBottom: 'calc(var(--safe-bottom) + 100px)',
-                      touchAction: 'pan-y'
-                    }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    className="tab-content"
                   >
-                    <Suspense fallback={<Loader />}>
-                      {activeTab === 'att' && <AttendanceTab initData={attData} />}
-                      {activeTab === 'marks' && <MarksTab />}
-                      {activeTab === 'cgpa' && <CgpaTab />}
-                      {activeTab === 'tt' && <TimetableTab />}
+                    <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}><div className="loader" /></div>}>
+                      {activeTab === 'att' && <AttendanceTab initData={attData} refreshKey={refreshKey} />}
+                      {activeTab === 'marks' && <MarksTab refreshKey={refreshKey} />}
+                      {activeTab === 'cgpa' && <CgpaTab refreshKey={refreshKey} />}
+                      {activeTab === 'tt' && <TimetableTab refreshKey={refreshKey} />}
                     </Suspense>
                   </motion.div>
                 </AnimatePresence>
-              </div>
+              </main>
 
-              {/* Bottom Nav Bar */}
-              <div style={{
-                position: 'fixed',
-                bottom: 'calc(var(--safe-bottom) + 20px)',
-                left: 20,
-                right: 20,
-                zIndex: 100
-              }}>
-                <div className="glass-card" style={{
-                  padding: '8px 12px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  borderRadius: 24,
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(255,255,255,0.08)'
-                }}>
+              {/* Navigation */}
+              <nav className="bottom-nav">
+                <div className="nav-bar">
                   {TABS.map(({ id, label, Icon }) => {
                     const isActive = activeTab === id
                     return (
                       <motion.div
                         key={id}
                         onClick={() => setActiveTab(id)}
-                        whileTap={{ scale: 0.9 }}
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: 4,
-                          padding: '8px 4px',
-                          cursor: 'pointer',
-                          color: isActive ? 'var(--accent-light)' : 'var(--text-muted)',
-                          position: 'relative'
-                        }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`nav-item ${isActive ? 'active' : ''}`}
                       >
                         <Icon />
-                        <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 500, letterSpacing: '-0.01em' }}>{label}</span>
+                        <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 500 }}>{label}</span>
                         {isActive && (
                           <motion.div
-                            layoutId="activeTab"
+                            layoutId="activeTabGlow"
                             style={{
                               position: 'absolute',
-                              top: -8,
-                              width: 24,
-                              height: 3,
-                              background: 'var(--accent-light)',
-                              borderRadius: '0 0 10px 10px',
-                              boxShadow: '0 4px 10px var(--accent-glow)'
+                              bottom: 4,
+                              width: 12,
+                              height: 2,
+                              background: 'var(--primary)',
+                              borderRadius: 4,
+                              boxShadow: '0 2px 8px var(--primary-glow)'
                             }}
                           />
                         )}
@@ -242,9 +210,8 @@ export default function App() {
                     )
                   })}
                 </div>
-              </div>
-
-            </div>
+              </nav>
+            </>
           )}
         </div>
       )}

@@ -20,7 +20,7 @@ export default function TimetableTab() {
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState({ type: '', message: '' })
-  const [form, setForm] = useState({ subject: '', day: 'Monday', start: '09:00', end: '10:00', room: '', color: '#6366f1' })
+  const [form, setForm] = useState({ subject: '', day: 'Monday', start: '09:00', end: '10:00', room: '', color: 'var(--primary)' })
 
   const save = (updated) => { setTtData(updated); localStorage.setItem('sis_tt', JSON.stringify(updated)) }
 
@@ -28,11 +28,19 @@ export default function TimetableTab() {
     setLoading(true)
     setStatus({ type: '', message: '' })
     try {
+      const jarStr = localStorage.getItem('sis_jar') || '{}';
+      let xsrf = "";
+      try {
+        const jar = JSON.parse(jarStr);
+        if (jar['XSRF-TOKEN']) xsrf = decodeURIComponent(jar['XSRF-TOKEN']);
+      } catch (e) { }
+
       const resp = await fetch(`${getBase()}${REG_PAGE}`, {
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'text/html,*/*',
-          'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}'
+          'X-Cookie-Jar': jarStr,
+          'X-XSRF-TOKEN': xsrf
         }
       })
       saveJar(resp)
@@ -127,164 +135,247 @@ export default function TimetableTab() {
   const slots = (ttData[ttDay] || []).slice().sort((a, b) => a.start.localeCompare(b.start))
 
   return (
-    <div style={{ padding: 20 }}>
-      <div className="bg-orbs">
-        <div className="orb orb-1" />
-        <div className="orb orb-3" />
-      </div>
-
-      <div className="section-hd" style={{ marginBottom: 16 }}>
-        <span className="section-title">Class Schedule</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <motion.span
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="section-badge"
-            style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+    <div style={{ padding: '0 0 24px' }}>
+      <div className="section-hd" style={{ marginBottom: 24, padding: '0 4px' }}>
+        <h2 className="display-txt" style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Operational Schedule</h2>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
             onClick={syncFromSIS}
+            disabled={loading}
+            style={{
+              background: 'var(--surface-hi)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              color: 'var(--text-secondary)',
+              fontSize: 10,
+              fontWeight: 800,
+              padding: '6px 12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}
           >
-            {loading ? '⏳ Syncing...' : '↻ Sync SIS'}
-          </motion.span>
-          <motion.span
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="section-badge"
-            style={{ cursor: 'pointer', background: 'var(--accent)', color: 'white' }}
-            onClick={() => setShowModal(true)}
-          >
-            + Add
-          </motion.span>
+            <span className={loading ? 'loader' : ''} style={loading ? { width: 10, height: 10, borderWidth: 2 } : {}}>
+              {!loading && '↻'}
+            </span>
+            SYNC SIS
+          </button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 24, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
-        {DAYS.map(d => (
-          <button
-            key={d}
-            className={`day-pill${d === ttDay ? ' active' : ''}`}
-            onClick={() => setTtDay(d)}
-          >
-            {d.slice(0, 3)}
-          </button>
-        ))}
+      {/* Day Selector */}
+      <div style={{
+        display: 'flex',
+        gap: 12,
+        marginBottom: 32,
+        overflowX: 'auto',
+        scrollbarWidth: 'none',
+        padding: '0 4px 12px',
+        maskImage: 'linear-gradient(to right, black 80%, transparent)'
+      }}>
+        {DAYS.map(d => {
+          const isActive = d === ttDay
+          return (
+            <motion.button
+              key={d}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setTtDay(d)}
+              style={{
+                background: isActive ? 'var(--primary)' : 'var(--surface-hi)',
+                color: isActive ? 'var(--bg-dark)' : 'var(--text-secondary)',
+                border: isActive ? 'none' : '1px solid var(--border)',
+                borderRadius: 16,
+                padding: '12px 24px',
+                fontSize: 13,
+                fontWeight: 800,
+                fontFamily: 'var(--font-display)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                flexShrink: 0,
+                boxShadow: isActive ? '0 8px 20px var(--primary-glow)' : 'none'
+              }}
+            >
+              {d.charAt(0) + d.slice(1, 3).toLowerCase()}
+            </motion.button>
+          )
+        })}
       </div>
 
       {status.message && (
-        <div className={status.type === 'error' ? 'status-banner error' : 'status-banner success'}>
-          {status.message}
-        </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={status.type === 'error' ? 'pill-error' : 'pill-success'}
+          style={{ padding: 16, borderRadius: 16, marginBottom: 24, textAlign: 'center', fontSize: 12, fontWeight: 700 }}
+        >
+          {status.message.toUpperCase()}
+        </motion.div>
       )}
 
       <AnimatePresence mode="wait">
         <motion.div
           key={ttDay}
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -10 }}
-          style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
         >
           {slots.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--surface)', borderRadius: 24, border: '1px dashed var(--border)' }}>
-              <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.8 }}>No classes scheduled for {ttDay}.<br />Enjoy your break! ☕️</p>
+            <div className="glass-card text-center" style={{ padding: '80px 24px', opacity: 0.6, borderStyle: 'dashed' }}>
+              <div style={{ fontSize: 32, marginBottom: 16 }}>☕️</div>
+              <p className="display-txt" style={{ fontSize: 16, color: 'var(--text-main)', marginBottom: 4 }}>NO SESSIONS SCHEDULED</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Enjoy your administrative recess for {ttDay}.</p>
             </div>
-          ) : slots.map((s, i) => (
-            <motion.div
-              key={i}
-              className="glass-card"
-              style={{ padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'center', position: 'relative' }}
-            >
-              <div style={{ width: 4, height: 40, borderRadius: 4, flexShrink: 0, background: s.color }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.subject}</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  {s.room && <span style={{ fontSize: 11, color: 'var(--accent-light)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>📍 {s.room}</span>}
-                  {s.room && <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>•</span>}
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Scheduled class</span>
-                </div>
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'white', flexShrink: 0, textAlign: 'right', fontWeight: 600 }}>
-                {fmt12(s.start)}<br />
-                <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{fmt12(s.end)}</span>
-              </div>
-              <button
-                onClick={() => delSlot(ttDay, i)}
-                style={{ background: 'rgba(255,255,255,0.03)', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, padding: '4px 8px', borderRadius: 8 }}
-              >
-                ×
-              </button>
-            </motion.div>
-          ))}
+          ) : (
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {slots.map((s, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="glass-card"
+                  style={{
+                    padding: '20px 24px',
+                    display: 'flex',
+                    gap: 20,
+                    alignItems: 'center',
+                    borderLeft: `3px solid ${s.color || 'var(--primary)'}`
+                  }}
+                >
+                  <div style={{ textAlign: 'center', minWidth: 64 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-main)' }}>{fmt12(s.start)}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginTop: 2 }}>{fmt12(s.end)}</div>
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)', marginBottom: 4 }}>{s.subject}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {s.room && (
+                        <div className="pill" style={{ background: 'var(--surface-highest)', color: 'var(--primary)', padding: '4px 8px', fontSize: 9 }}>
+                          LOCATION: {s.room}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>VERIFIED</div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => delSlot(ttDay, i)}
+                    style={{
+                      background: 'var(--surface-highest)',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      width: 32, height: 32,
+                      borderRadius: 12,
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontSize: 16
+                    }}
+                  >
+                    ×
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
 
-      <motion.button
-        whileTap={{ scale: 0.98 }}
-        style={{ width: '100%', background: 'var(--surface)', border: '1px dashed var(--border-hi)', borderRadius: 18, padding: '18px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: 12, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-        onClick={() => setShowModal(true)}
-      >
-        ＋ Add New Class Slot
-      </motion.button>
+      <div style={{ marginTop: 40, padding: '0 4px' }}>
+        <button
+          className="btn-primary"
+          onClick={() => setShowModal(true)}
+          style={{ height: 64, borderRadius: 20 }}
+        >
+          APPEND NEW SESSION
+        </button>
+      </div>
 
       <AnimatePresence>
         {showModal && (
-          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-overlay"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 200,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+              background: 'rgba(1, 14, 36, 0.8)',
+              backdropFilter: 'blur(20px)'
+            }}
+            onClick={e => e.target === e.currentTarget && setShowModal(false)}
+          >
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="modal"
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="glass-card"
+              style={{
+                width: '100%',
+                maxWidth: 500,
+                borderRadius: '32px 32px 0 0',
+                padding: '32px 24px calc(32px + var(--safe-bottom))',
+                borderBottom: 'none'
+              }}
             >
-              <div className="modal-handle" />
-              <h3 style={{ color: 'white', marginBottom: 20 }}>Add New Class</h3>
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 24px' }} />
+              <h3 className="display-txt" style={{ fontSize: 24, color: 'var(--text-main)', marginBottom: 32 }}>Manual Override</h3>
 
-              <div className="field">
-                <label className="field-label">Subject Name</label>
-                <input className="field-input" placeholder="e.g. Machine Learning" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} />
+              <div className="field-group">
+                <label className="field-label">Course Nomenclature</label>
+                <input className="field-input" placeholder="Enter subject name" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} />
               </div>
 
-              <div className="modal-row">
-                <div className="field">
-                  <label className="field-label">Day</label>
-                  <select className="field-input" value={form.day} onChange={e => setForm(f => ({ ...f, day: e.target.value }))}>
-                    {DAYS.map(d => <option key={d}>{d}</option>)}
+              <div className="grid-2" style={{ marginBottom: 24 }}>
+                <div className="field-group">
+                  <label className="field-label">Scheduled Day</label>
+                  <select className="field-input" style={{ background: 'rgba(255,255,255,0.05)', color: 'white' }} value={form.day} onChange={e => setForm(f => ({ ...f, day: e.target.value }))}>
+                    {DAYS.map(d => <option key={d} style={{ background: 'var(--bg)' }}>{d}</option>)}
                   </select>
                 </div>
-                <div className="field">
-                  <label className="field-label">Theme Color</label>
-                  <select className="field-input" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))}>
-                    <option value="#6366f1">Indigo</option>
-                    <option value="#34d399">Green</option>
-                    <option value="#f87171">Red</option>
-                    <option value="#fbbf24">Amber</option>
-                    <option value="#22d3ee">Cyan</option>
-                    <option value="#a78bfa">Violet</option>
+                <div className="field-group">
+                  <label className="field-label">System Tint</label>
+                  <select className="field-input" style={{ background: 'rgba(255,255,255,0.05)', color: 'white' }} value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))}>
+                    <option value="var(--primary)" style={{ background: 'var(--bg)' }}>Cyan</option>
+                    <option value="var(--secondary)" style={{ background: 'var(--bg)' }}>Emerald</option>
+                    <option value="var(--tertiary)" style={{ background: 'var(--bg)' }}>Amber</option>
+                    <option value="#6366f1" style={{ background: 'var(--bg)' }}>Indigo</option>
+                    <option value="var(--error)" style={{ background: 'var(--bg)' }}>Coral</option>
                   </select>
                 </div>
               </div>
 
-              <div className="modal-row">
-                <div className="field">
-                  <label className="field-label">Start Time</label>
+              <div className="grid-2" style={{ marginBottom: 24 }}>
+                <div className="field-group">
+                  <label className="field-label">Commencement</label>
                   <input className="field-input" type="time" value={form.start} onChange={e => setForm(f => ({ ...f, start: e.target.value }))} />
                 </div>
-                <div className="field">
-                  <label className="field-label">End Time</label>
+                <div className="field-group">
+                  <label className="field-label">Conclusion</label>
                   <input className="field-input" type="time" value={form.end} onChange={e => setForm(f => ({ ...f, end: e.target.value }))} />
                 </div>
               </div>
 
-              <div className="field">
-                <label className="field-label">Room / Building</label>
-                <input className="field-input" placeholder="e.g. AB2-301" value={form.room} onChange={e => setForm(f => ({ ...f, room: e.target.value }))} />
+              <div className="field-group" style={{ marginBottom: 40 }}>
+                <label className="field-label">Location / Hub</label>
+                <input className="field-input" placeholder="e.g. AB1-102" value={form.room} onChange={e => setForm(f => ({ ...f, room: e.target.value }))} />
               </div>
 
-              <div className="modal-btns">
-                <button className="btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-                <button className="btn-solid" onClick={addSlot}>Create Class</button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <button className="btn-secondary" onClick={() => setShowModal(false)}>ABORT</button>
+                <button className="btn-primary" style={{ padding: 16 }} onClick={addSlot}>EXECUTE</button>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

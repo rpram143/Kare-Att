@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { getBase, LOGIN_PATH } from './api'
 import Logo from './Logo'
 
@@ -82,47 +82,75 @@ export default function LoginScreen({ onLogin }) {
   }
 
   return (
-    <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', overflow: 'hidden' }}>
-
-      {/* Background Decor */}
-      <div className="bg-orbs">
-        <div className="orb orb-1" />
-        <div className="orb orb-2" />
-        <div className="bg-grid" />
-      </div>
+    <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative' }}>
+      {/* Proxy Settings Trigger */}
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+        onClick={() => setShowProxy(true)}
+        style={{
+          position: 'absolute',
+          top: 'calc(24px + var(--safe-top))',
+          right: 24,
+          width: 44,
+          height: 44,
+          borderRadius: 14,
+          background: 'var(--surface-hi)',
+          border: '1px solid var(--border)',
+          color: 'var(--text-muted)',
+          display: 'grid',
+          placeItems: 'center',
+          cursor: 'pointer',
+          zIndex: 10,
+          backdropFilter: 'blur(10px)'
+        }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      </motion.button>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        style={{ width: '100%', maxWidth: 400, position: 'relative', zIndex: 1 }}
+        style={{ width: '100%', maxWidth: 440, position: 'relative', zIndex: 1 }}
       >
-        <div className="glass-card" style={{ padding: 32 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: 40 }}>
-            <Logo size={70} />
-            <div style={{ marginTop: 16 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', color: 'white' }}>KARE-ATT</h1>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 500 }}>Student Academic Companion</p>
+        <div className="glass-card" style={{ padding: '48px 32px' }}>
+          <div className="text-center" style={{ marginBottom: 48 }}>
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Logo size={80} />
+            </motion.div>
+            <div style={{ marginTop: 24 }}>
+              <h1 className="display-txt" style={{ fontSize: 32, color: 'var(--text-main)' }}>KARE-ATT</h1>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, fontWeight: 500, letterSpacing: '0.01em' }}>Premium Student Dashboard</p>
             </div>
           </div>
 
-          <div className="field">
-            <label className="field-label">Registration Number</label>
+          <div className="field-group">
+            <label className="field-label">Registry Identifier</label>
             <input
               className="field-input"
-              placeholder="e.g. 992400xxxx"
+              placeholder="Enter your registration number"
+              type="text"
               value={regNo}
               onChange={e => setRegNo(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && doLogin()}
             />
           </div>
 
-          <div className="field" style={{ marginBottom: 30 }}>
-            <label className="field-label">Password</label>
+          <div className="field-group" style={{ marginBottom: 40 }}>
+            <label className="field-label">Security Access Key</label>
             <input
               className="field-input"
               type="password"
-              placeholder="••••••••"
+              placeholder="••••••••••••"
               value={pass}
               onChange={e => setPass(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && doLogin()}
@@ -133,66 +161,80 @@ export default function LoginScreen({ onLogin }) {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              style={{ color: 'var(--red)', fontSize: 12, background: 'var(--red-soft)', padding: 12, borderRadius: 10, marginBottom: 20, textAlign: 'center', fontWeight: 600, border: '1px solid rgba(239,68,68,0.2)' }}
+              className="pill-error"
+              style={{ padding: 16, borderRadius: 12, marginBottom: 24, textAlign: 'center', fontWeight: 600, border: '1px solid rgba(255,180,171,0.2)' }}
             >
               {error}
             </motion.div>
           )}
 
-          <button className="btn-primary" onClick={doLogin} disabled={loading} style={{ position: 'relative', overflow: 'hidden' }}>
-            <span style={{ opacity: loading ? 0 : 1 }}>Sign In</span>
+          <button className="btn-primary" onClick={doLogin} disabled={loading} style={{ position: 'relative', height: 60 }}>
+            <span style={{ opacity: loading ? 0 : 1 }}>AUTHORIZE ACCESS</span>
             {loading && (
               <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-                <span className="spin">↻</span>
+                <span className="loader" style={{ width: 24, height: 24 }} />
               </div>
             )}
           </button>
-
-          <div style={{ marginTop: 24, textAlign: 'center' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              Connection issues?{' '}
-              <span
-                style={{ color: 'var(--accent-light)', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
-                onClick={() => setShowProxy(true)}
-              >
-                Configure Proxy
-              </span>
-            </span>
-          </div>
         </div>
 
-        <div style={{ marginTop: 32, textAlign: 'center', opacity: 0.5 }}>
-          <p style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Powered by KARE SIS Data</p>
+        <div className="text-center" style={{ marginTop: 40, opacity: 0.4 }}>
+          <p style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>Intelligent Student Companion v2.0</p>
         </div>
       </motion.div>
 
-      {showProxy && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowProxy(false)}>
-          <div className="modal">
-            <div className="modal-handle" />
-            <h3 style={{ color: 'white' }}>Proxy Configuration</h3>
-            <p>If you cannot log in, ensure your local proxy server is running and the URL below matches.</p>
-            <code>npm start</code>
+      <AnimatePresence>
+        {showProxy && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="modal-overlay"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 200,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+              background: 'rgba(1, 14, 36, 0.8)',
+              backdropFilter: 'blur(20px)'
+            }}
+            onClick={e => e.target === e.currentTarget && setShowProxy(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: 400 }}
+            >
+              <h3 className="display-txt" style={{ color: 'var(--text-main)', marginBottom: 12, fontSize: 20 }}>System Proxy</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>Adjust the gateway URL if you are experiencing connectivity interruptions with the institutional server.</p>
 
-            <div className="field" style={{ marginTop: 20 }}>
-              <label className="field-label">Proxy Base URL</label>
-              <input
-                className="field-input"
-                placeholder="http://localhost:8010"
-                value={proxyUrl}
-                onChange={e => {
-                  setProxyUrl(e.target.value)
-                  localStorage.setItem('sis_proxy', e.target.value)
-                }}
-              />
-            </div>
+              <div className="field-group">
+                <label className="field-label">Gateway URL</label>
+                <input
+                  className="field-input"
+                  placeholder="https://proxy.example.com"
+                  value={proxyUrl}
+                  onChange={e => {
+                    setProxyUrl(e.target.value)
+                    localStorage.setItem('sis_proxy', e.target.value)
+                  }}
+                />
+              </div>
 
-            <button className="btn-primary" onClick={() => setShowProxy(false)} style={{ marginTop: 10 }}>
-              Save & Close
-            </button>
-          </div>
-        </div>
-      )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+                <button className="btn-primary" onClick={() => setShowProxy(false)}>
+                  COMPLETE CONFIGURATION
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

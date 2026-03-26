@@ -8,8 +8,8 @@ export default function SplashScreen({ show = true }) {
                 <motion.div
                     className="splash-container"
                     initial={{ opacity: 1 }}
-                    exit={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
-                    transition={{ duration: 0.8, ease: "easeInOut" }}
+                    exit={{ opacity: 0, scale: 1.05, filter: 'blur(30px)' }}
+                    transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
                     style={{
                         position: 'fixed',
                         inset: 0,
@@ -18,47 +18,44 @@ export default function SplashScreen({ show = true }) {
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: 'linear-gradient(135deg, #060e20 0%, #1a2540 100%)',
+                        background: '#041329',
                         overflow: 'hidden'
                     }}
                 >
-                    {/* Animated Background Orbs */}
-                    <div className="bg-orbs" style={{ filter: 'blur(100px)', opacity: 0.3 }}>
+                    {/* Atmospheric Orbs */}
+                    <div className="bg-orbs" style={{ filter: 'blur(120px)', opacity: 0.4 }}>
                         <motion.div
-                            style={{ position: 'absolute', top: '10%', left: '10%', width: 300, height: 300, borderRadius: '50%', background: '#645efb' }}
-                            animate={{ x: [0, 50, 0], y: [0, 100, 0], scale: [1, 1.2, 1] }}
-                            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                            style={{ position: 'absolute', top: '20%', left: '15%', width: 400, height: 400, borderRadius: '50%', background: 'var(--primary-glow)' }}
+                            animate={{ x: [0, 40, 0], y: [0, 80, 0], scale: [1, 1.1, 1] }}
+                            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
                         />
                         <motion.div
-                            style={{ position: 'absolute', bottom: '10%', right: '10%', width: 250, height: 250, borderRadius: '50%', background: '#af88ff' }}
-                            animate={{ x: [0, -70, 0], y: [0, -50, 0], scale: [1, 1.3, 1] }}
-                            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                            style={{ position: 'absolute', bottom: '20%', right: '15%', width: 350, height: 350, borderRadius: '50%', background: 'var(--secondary-glow)' }}
+                            animate={{ x: [0, -60, 0], y: [0, -40, 0], scale: [1, 1.2, 1] }}
+                            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                         />
                     </div>
 
                     {/* Logo Section */}
                     <motion.div
-                        initial={{ y: 20, opacity: 0 }}
+                        initial={{ y: 30, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
+                        transition={{ duration: 1, delay: 0.3, ease: [0, 0.55, 0.45, 1] }}
                         style={{ textAlign: 'center', zIndex: 1 }}
                     >
-                        <Logo size={180} />
+                        <Logo size={140} />
 
                         <motion.h1
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8, delay: 1.2 }}
+                            initial={{ opacity: 0, letterSpacing: '0.4em' }}
+                            animate={{ opacity: 1, letterSpacing: '0.15em' }}
+                            transition={{ duration: 1.2, delay: 1.2 }}
                             style={{
-                                marginTop: 24,
-                                fontSize: 48,
-                                fontWeight: 900,
-                                letterSpacing: '0.12em',
+                                marginTop: 40,
+                                fontSize: 40,
+                                fontWeight: 800,
                                 color: 'white',
-                                background: 'linear-gradient(to bottom, #ffffff, #a3aac4)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                fontFamily: 'system-ui, -apple-system, sans-serif'
+                                fontFamily: 'var(--font-display)',
+                                textTransform: 'uppercase'
                             }}
                         >
                             KARE-ATT
@@ -67,59 +64,70 @@ export default function SplashScreen({ show = true }) {
                         <motion.div
                             initial={{ scaleX: 0 }}
                             animate={{ scaleX: 1 }}
-                            transition={{ duration: 1, delay: 1.5, ease: "circOut" }}
+                            transition={{ duration: 1.5, delay: 1.8, ease: "circOut" }}
                             style={{
-                                height: 2,
-                                background: 'linear-gradient(90deg, transparent, #8885ff, transparent)',
-                                margin: '12px auto',
-                                width: 140
+                                height: 1,
+                                background: 'linear-gradient(90deg, transparent, var(--primary), transparent)',
+                                margin: '20px auto',
+                                width: 180,
+                                opacity: 0.6
                             }}
                         />
 
                         <motion.p
                             initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 1, delay: 2 }}
+                            animate={{ opacity: 0.5 }}
+                            transition={{ duration: 1, delay: 2.4 }}
                             style={{
-                                fontSize: 14,
-                                color: '#a3aac4',
-                                letterSpacing: '0.05em',
-                                fontWeight: 500
+                                fontSize: 13,
+                                color: 'var(--text-muted)',
+                                letterSpacing: '0.1em',
+                                fontFamily: 'var(--font-mono)',
+                                textTransform: 'uppercase'
                             }}
                         >
-                            The Academic Companion
+                            Intelligent Academic Hub
                         </motion.p>
                     </motion.div>
 
-                    {/* Footer Decoration */}
+                    {/* Bottom Indicator */}
                     <motion.div
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 0.6 }}
-                        transition={{ duration: 1, delay: 2.5 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1, delay: 3 }}
                         style={{
                             position: 'absolute',
-                            bottom: 40,
-                            fontSize: 11,
-                            color: '#6d758c',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.2em'
+                            bottom: 60,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 16
                         }}
                     >
-                        Efficiency Redefined
+                        <div className="loader" style={{ width: 24, height: 24, borderWidth: 2 }} />
+                        <span style={{
+                            fontSize: 10,
+                            color: 'var(--text-muted)',
+                            letterSpacing: '0.2em',
+                            textTransform: 'uppercase',
+                            opacity: 0.4,
+                            fontFamily: 'var(--font-mono)'
+                        }}>
+                            Initializing System
+                        </span>
                     </motion.div>
 
                     <style dangerouslySetInnerHTML={{
                         __html: `
-            .splash-container::before {
-              content: "";
-              position: absolute;
-              inset: 0;
-              background-image: radial-gradient(circle at 50% 50%, rgba(167, 165, 255, 0.05) 1px, transparent 1px);
-              background-size: 24px 24px;
-              opacity: 0.3;
-              mask-image: linear-gradient(to bottom, transparent, black, transparent);
-            }
-          `}} />
+                        .splash-container::before {
+                            content: "";
+                            position: absolute;
+                            inset: 0;
+                            background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.03) 1px, transparent 0);
+                            background-size: 32px 32px;
+                            mask-image: radial-gradient(circle at 50% 50%, black, transparent 80%);
+                        }
+                    `}} />
                 </motion.div>
             )}
         </AnimatePresence>

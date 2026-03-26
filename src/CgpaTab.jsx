@@ -36,20 +36,28 @@ function parseCgpaHtml(doc) {
   return { cgpa, earnedCredits, arrears, semesters }
 }
 
-export default function CgpaTab() {
+export default function CgpaTab({ refreshKey }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [refreshKey])
 
   const load = async () => {
     setLoading(true)
     try {
+      const jarStr = localStorage.getItem('sis_jar') || '{}';
+      let xsrf = "";
+      try {
+        const jar = JSON.parse(jarStr);
+        if (jar['XSRF-TOKEN']) xsrf = decodeURIComponent(jar['XSRF-TOKEN']);
+      } catch (e) { }
+
       const resp = await fetch(`${getBase()}${GRADE_PAGE}`, {
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'text/html,*/*',
-          'X-Cookie-Jar': localStorage.getItem('sis_jar') || '{}'
+          'X-Cookie-Jar': jarStr,
+          'X-XSRF-TOKEN': xsrf
         }
       })
       saveJar(resp)
@@ -67,108 +75,131 @@ export default function CgpaTab() {
   const { cgpa, earnedCredits, arrears, semesters = [], fetchedAt } = data || {}
 
   return (
-    <div style={{ padding: 20 }}>
-      {/* Background Decor */}
-      <div className="bg-orbs">
-        <div className="orb orb-1" />
-        <div className="orb orb-2" />
-        <div className="bg-grid" />
-      </div>
-
+    <div style={{ padding: '0 0 24px' }}>
       {/* CGPA Hero Widget */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="glass-card"
+        className="hero-card slide-up d1"
         style={{
           textAlign: 'center',
-          marginBottom: 24,
-          padding: '40px 24px',
-          background: 'linear-gradient(145deg, rgba(99,102,241,0.1), rgba(139,92,246,0.05))',
-          boxShadow: '0 0 40px rgba(99,102,241,0.1) inset'
+          marginBottom: 32,
+          padding: '48px 24px'
         }}
       >
-        <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--text-muted)', marginBottom: 12 }}>Cumulative Score</div>
+        <div className="stat-label" style={{ marginBottom: 12 }}>Cumulative Grade Index</div>
         <div style={{
-          fontSize: 72,
-          fontWeight: 900,
+          fontSize: 80,
+          fontWeight: 800,
           fontFamily: 'var(--font-display)',
-          letterSpacing: '-0.05em',
-          background: 'linear-gradient(to bottom, #ffffff, #a5b4fc)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
+          letterSpacing: '-0.04em',
+          color: 'var(--primary)',
           lineHeight: 1
         }}>
           {loading ? '…' : (cgpa || '0.0')}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 24 }}>
-          {earnedCredits && <span className="pill present" style={{ padding: '6px 12px' }}>{earnedCredits} Credits</span>}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 32 }}>
+          {earnedCredits && <span className="pill pill-success" style={{ padding: '8px 16px' }}>{earnedCredits} CREDITS EARNED</span>}
           {arrears !== null && (
-            <span className={`pill ${parseInt(arrears) > 0 ? 'absent' : ''}`} style={{ padding: '6px 12px' }}>
-              {arrears} Arrears
+            <span className={`pill ${parseInt(arrears) > 0 ? 'pill-error' : 'pill-success'}`} style={{ padding: '8px 16px' }}>
+              {arrears} ARREARS
             </span>
           )}
         </div>
       </motion.div>
 
-      <div className="section-hd">
-        <span className="section-title">Academic History</span>
-        <span className="section-badge">{semesters.length} Semesters</span>
+      <div className="section-hd" style={{ padding: '0 4px', marginBottom: 20 }}>
+        <h2 className="display-txt" style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Academic Chronology</h2>
+        <div style={{ width: 40, height: 1, background: 'var(--border)' }} />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {!loading && semesters.length === 0 && <div className="empty-state"><div className="empty-text">No academic records found.</div></div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {!loading && semesters.length === 0 && (
+          <div className="text-center" style={{ padding: '60px 20px', opacity: 0.5 }}>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>No academic chronology retrieved.</p>
+          </div>
+        )}
 
         {semesters.map((sem, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="glass-card"
-            style={{ padding: 18 }}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.05 + 0.3 }}
+            style={{ position: 'relative', paddingLeft: 24 }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <div>
-                <h3 style={{ fontSize: 14, fontWeight: 800, color: 'white' }}>{sem.sem}</h3>
-                {sem.year && <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: 2 }}>{sem.year}</div>}
-              </div>
-              <span className="section-badge" style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)' }}>{sem.subjects.length} courses</span>
-            </div>
+            {/* Timeline Line */}
+            <div style={{
+              position: 'absolute',
+              left: 0, top: 0, bottom: 0,
+              width: 2,
+              background: 'linear-gradient(to bottom, var(--primary), transparent)',
+              opacity: 0.3
+            }} />
+            <div style={{
+              position: 'absolute',
+              left: -3, top: 0,
+              width: 8, height: 8,
+              borderRadius: '50%',
+              background: 'var(--primary)',
+              boxShadow: '0 0 10px var(--primary-glow)'
+            }} />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {sem.subjects.map((s, j) => (
-                <div key={j} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderTop: j === 0 ? 'none' : '1px solid var(--border)', gap: 12 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
-                    <div style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{s.code}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    {s.credits && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>{s.credits}cr</span>}
-                    <span style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 14,
-                      fontWeight: 800,
-                      color: gradeColor(s.grade),
-                      minWidth: 24,
-                      textAlign: 'right'
-                    }}>
-                      {s.grade || '—'}
-                    </span>
-                  </div>
+            <div className="glass-card" style={{ padding: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                <div>
+                  <h3 className="display-txt" style={{ fontSize: 18, color: 'var(--text-main)', marginBottom: 4 }}>{sem.sem.toUpperCase()}</h3>
+                  {sem.year && <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{sem.year}</div>}
                 </div>
-              ))}
+                <div className="pill" style={{ background: 'var(--surface-hi)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                  {sem.subjects.length} COURSES
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {sem.subjects.map((s, j) => (
+                  <div key={j} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</div>
+                      <code style={{ fontSize: 10, color: 'var(--text-muted)', opacity: 0.7 }}>{s.code}</code>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+                      {s.credits && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)' }}>{s.credits} CR</div>}
+                      <div style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 18,
+                        fontWeight: 800,
+                        color: gradeColor(s.grade) || 'var(--text-main)',
+                        minWidth: 28,
+                        textAlign: 'right'
+                      }}>
+                        {s.grade || '—'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <button className="btn-refresh" onClick={load} style={{ marginTop: 24, position: 'relative', zIndex: 1 }}>
-        <span className={loading ? 'spin' : ''}>↻</span>
-        <span>{loading ? 'Refreshing History…' : 'Sync History'}</span>
-      </button>
+      <div style={{ padding: '0 4px', marginTop: 32 }}>
+        <button className="btn-secondary" onClick={load} disabled={loading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <span className={loading ? 'loader' : ''} style={loading ? { width: 14, height: 14, borderWidth: 2 } : {}}>
+            {!loading && '↻'}
+          </span>
+          <span>{loading ? 'ARCHIVING LIVE DATA…' : 'SYNCHRONIZE REGISTRY'}</span>
+        </button>
+      </div>
 
-      {fetchedAt && <div className="last-updated">Last sync: {new Date(fetchedAt).toLocaleTimeString()}</div>}
+      {fetchedAt && (
+        <div className="text-center" style={{ marginTop: 24, opacity: 0.4 }}>
+          <p style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
+            LAST RETRIEVAL: {new Date(fetchedAt).toLocaleTimeString().toUpperCase()}
+          </p>
+        </div>
+      )}
     </div>
   )
 }
