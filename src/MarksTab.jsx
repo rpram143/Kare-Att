@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getBase, MARKS_API, saveJar } from './api'
 import { motion } from 'framer-motion'
 
-export default function MarksTab({ refreshKey }) {
+export default function MarksTab({ refreshKey, onSessionExpired }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -13,21 +13,20 @@ export default function MarksTab({ refreshKey }) {
     setLoading(true); setError(false)
     try {
       const jarStr = localStorage.getItem('sis_jar') || '{}';
-      let xsrf = "";
-      try {
-        const jar = JSON.parse(jarStr);
-        if (jar['XSRF-TOKEN']) xsrf = decodeURIComponent(jar['XSRF-TOKEN']);
-      } catch (e) { }
 
       const resp = await fetch(`${getBase()}${MARKS_API}?draw=1&start=0&length=100`, {
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
           'X-Cookie-Jar': jarStr,
-          'X-XSRF-TOKEN': xsrf
         }
       })
       saveJar(resp)
+
+      if (resp.status === 401) {
+        const body = await resp.json().catch(() => ({}))
+        if (body.error === 'SESSION_EXPIRED') { onSessionExpired?.(); return; }
+      }
       const json = await resp.json()
       const marks = (json.data || []).map(r => ({ name: r.course_name || '', code: r.course_code || '' })).filter(m => m.name)
       const result = { marks, fetchedAt: Date.now() }

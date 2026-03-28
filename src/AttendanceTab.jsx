@@ -45,7 +45,7 @@ const BarFill = ({ pct, cls }) => (
   </div>
 )
 
-export default function AttendanceTab({ initData, refreshKey }) {
+export default function AttendanceTab({ initData, refreshKey, onSessionExpired }) {
   const [data, setData] = useState(initData)
   const [loading, setLoading] = useState(!initData)
 
@@ -53,21 +53,21 @@ export default function AttendanceTab({ initData, refreshKey }) {
     setLoading(true)
     try {
       const jarStr = localStorage.getItem('sis_jar') || '{}';
-      let xsrf = "";
-      try {
-        const jar = JSON.parse(jarStr);
-        if (jar['XSRF-TOKEN']) xsrf = decodeURIComponent(jar['XSRF-TOKEN']);
-      } catch (e) { }
 
       const resp = await fetch(`${getBase()}${ATTEND_API}?draw=1&start=0&length=100`, {
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
           'X-Cookie-Jar': jarStr,
-          'X-XSRF-TOKEN': xsrf
         }
       })
       saveJar(resp)
+
+      // Session expired — proxy sends 401 with SESSION_EXPIRED
+      if (resp.status === 401) {
+        const body = await resp.json().catch(() => ({}))
+        if (body.error === 'SESSION_EXPIRED') { onSessionExpired?.(); return; }
+      }
       const json = await resp.json()
       const subjects = (json.data || []).map(r => ({
         name: r.course_name, code: r.course_code,

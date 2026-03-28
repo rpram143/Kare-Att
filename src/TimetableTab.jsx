@@ -14,7 +14,7 @@ const SLOT_MAP = {
   '8': { start: '16:20', end: '17:10' },
 }
 
-export default function TimetableTab() {
+export default function TimetableTab({ onSessionExpired }) {
   const [ttData, setTtData] = useState(() => JSON.parse(localStorage.getItem('sis_tt') || '{}'))
   const [ttDay, setTtDay] = useState(DAYS[new Date().getDay() - 1] || 'Monday')
   const [showModal, setShowModal] = useState(false)
@@ -29,21 +29,20 @@ export default function TimetableTab() {
     setStatus({ type: '', message: '' })
     try {
       const jarStr = localStorage.getItem('sis_jar') || '{}';
-      let xsrf = "";
-      try {
-        const jar = JSON.parse(jarStr);
-        if (jar['XSRF-TOKEN']) xsrf = decodeURIComponent(jar['XSRF-TOKEN']);
-      } catch (e) { }
 
       const resp = await fetch(`${getBase()}${REG_PAGE}`, {
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'text/html,*/*',
           'X-Cookie-Jar': jarStr,
-          'X-XSRF-TOKEN': xsrf
         }
       })
       saveJar(resp)
+
+      if (resp.status === 401) {
+        const body = await resp.json().catch(() => ({}))
+        if (body.error === 'SESSION_EXPIRED') { onSessionExpired?.(); return; }
+      }
       const html = await resp.text()
       const doc = new DOMParser().parseFromString(html, 'text/html')
 

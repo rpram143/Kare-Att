@@ -95,6 +95,12 @@ export default function App() {
     setLoggedIn(true)
   }
 
+  // Called by any tab when proxy returns 401 SESSION_EXPIRED
+  const handleSessionExpired = () => {
+    ['sis_reg', 'sis_pass', 'sis_name', 'sis_att_cache', 'sis_marks_cache', 'sis_cgpa_cache', 'sis_jar'].forEach(k => localStorage.removeItem(k))
+    setLoggedIn(false); setStudentName(''); setAttData(null); setActiveTab('att')
+  }
+
   const logout = () => {
     ['sis_reg', 'sis_pass', 'sis_name', 'sis_att_cache', 'sis_marks_cache', 'sis_cgpa_cache', 'sis_jar'].forEach(k => localStorage.removeItem(k))
     setLoggedIn(false); setStudentName(''); setAttData(null); setActiveTab('att')
@@ -169,10 +175,10 @@ export default function App() {
                     className="tab-content"
                   >
                     <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}><div className="loader" /></div>}>
-                      {activeTab === 'att' && <AttendanceTab initData={attData} refreshKey={refreshKey} />}
-                      {activeTab === 'marks' && <MarksTab refreshKey={refreshKey} />}
-                      {activeTab === 'cgpa' && <CgpaTab refreshKey={refreshKey} />}
-                      {activeTab === 'tt' && <TimetableTab refreshKey={refreshKey} />}
+                      {activeTab === 'att' && <AttendanceTab initData={attData} refreshKey={refreshKey} onSessionExpired={handleSessionExpired} />}
+                      {activeTab === 'marks' && <MarksTab refreshKey={refreshKey} onSessionExpired={handleSessionExpired} />}
+                      {activeTab === 'cgpa' && <CgpaTab refreshKey={refreshKey} onSessionExpired={handleSessionExpired} />}
+                      {activeTab === 'tt' && <TimetableTab refreshKey={refreshKey} onSessionExpired={handleSessionExpired} />}
                     </Suspense>
                   </motion.div>
                 </AnimatePresence>

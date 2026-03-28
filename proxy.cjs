@@ -90,29 +90,44 @@ app.use(async (req, res) => {
     }
 
     // 2. Standard Proxy for all other requests
-    const config = {
-      method: req.method,
-      url: `${TARGET}${path}`,
-      headers: {
-        'Cookie': jarToString(jar),
-        'X-Requested-With': 'XMLHttpRequest',
-        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
-        'Accept': req.headers['accept'] || '*/*',
-      },
-      data: req.method !== 'GET' ? req.body : undefined,
-      validateStatus: (status) => true
-    };
+    let resp = await makeRequest(req, jar, path);
 
-    const resp = await axios(config);
+    // Detect session expiry — SIS redirects to /login when session is gone
+    if (resp.status === 301 || resp.status === 302) {
+      const location = resp.headers['location'] || '';
+      if (location.includes('/login')) {
+        console.log('  [PROXY] Session expired — telling client to re-login');
+        return res.status(401).send({ error: 'SESSION_EXPIRED' });
+      }
+    }
+
+    // Detect XSRF token mismatch (Laravel returns 419)
+    // Only then do a single silent GET /login to refresh the token — not on every request
+    if (resp.status === 419) {
+      console.log('  [PROXY] 419 XSRF mismatch — refreshing token once (no extra login hit)');
+      const refreshResp = await axios.get(`${TARGET}/login`, {
+        headers: {
+          'Cookie': jarToString(jar),
+          'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0'
+        },
+        validateStatus: () => true
+      });
+      updateJar(jar, refreshResp.headers['set-cookie']);
+
+      // Retry original request once with fresh XSRF
+      resp = await makeRequest(req, jar, path);
+      console.log(`  [PROXY] Retry response: ${resp.status}`);
+    }
+
     updateJar(jar, resp.headers['set-cookie']);
-    
+
     console.log(`  Response: ${resp.status}`);
     if (typeof resp.data === 'string') {
       console.log(`  Body length: ${resp.data.length}`);
     } else {
       console.log(`  Body: JSON object with keys: ${Object.keys(resp.data || {}).join(', ')}`);
     }
-    
+
     res.set('X-Cookie-Jar', JSON.stringify(jar));
     res.status(resp.status).send(resp.data);
 
@@ -121,6 +136,25 @@ app.use(async (req, res) => {
     res.status(500).send({ error: err.message });
   }
 });
+
+// Helper: fire one request using current jar (no XSRF pre-fetch)
+async function makeRequest(req, jar, path) {
+  const xsrf = jar['XSRF-TOKEN'] ? decodeURIComponent(jar['XSRF-TOKEN']) : '';
+  return axios({
+    method: req.method,
+    url: `${TARGET}${path}`,
+    headers: {
+      'Cookie': jarToString(jar),
+      'X-XSRF-TOKEN': xsrf,
+      'X-Requested-With': 'XMLHttpRequest',
+      'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
+      'Accept': req.headers['accept'] || 'application/json, text/html, */*',
+    },
+    data: req.method !== 'GET' ? req.body : undefined,
+    validateStatus: () => true,
+    maxRedirects: 0  // don't auto-follow so we can detect 302 → /login ourselves
+  });
+}
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n✅ Production Proxy running on port ${PORT}`);

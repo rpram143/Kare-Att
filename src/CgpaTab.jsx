@@ -36,7 +36,7 @@ function parseCgpaHtml(doc) {
   return { cgpa, earnedCredits, arrears, semesters }
 }
 
-export default function CgpaTab({ refreshKey }) {
+export default function CgpaTab({ refreshKey, onSessionExpired }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -46,21 +46,20 @@ export default function CgpaTab({ refreshKey }) {
     setLoading(true)
     try {
       const jarStr = localStorage.getItem('sis_jar') || '{}';
-      let xsrf = "";
-      try {
-        const jar = JSON.parse(jarStr);
-        if (jar['XSRF-TOKEN']) xsrf = decodeURIComponent(jar['XSRF-TOKEN']);
-      } catch (e) { }
 
       const resp = await fetch(`${getBase()}${GRADE_PAGE}`, {
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'text/html,*/*',
           'X-Cookie-Jar': jarStr,
-          'X-XSRF-TOKEN': xsrf
         }
       })
       saveJar(resp)
+
+      if (resp.status === 401) {
+        const body = await resp.json().catch(() => ({}))
+        if (body.error === 'SESSION_EXPIRED') { onSessionExpired?.(); return; }
+      }
       const html = await resp.text()
       const doc = new DOMParser().parseFromString(html, 'text/html')
       const result = { ...parseCgpaHtml(doc), fetchedAt: Date.now() }
