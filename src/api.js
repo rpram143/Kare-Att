@@ -9,27 +9,35 @@ export const MIN_ATT = 75
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export const getBase = () => {
-  // If no proxy is set, default to SIS directly on native, or a local proxy on web
   const p = localStorage.getItem('sis_proxy')
   if (p) return p.replace(/\/$/, '')
-
-  // If we are on web and haven't set a proxy, we probably need one
-  // but let's default to a sane behavior: the real SIS URL
   return SIS_BASE
 }
 
+export const safeParse = (str, fallback = null) => {
+  try { return JSON.parse(str) } catch { return fallback }
+}
+
+export const getXsrf = () => {
+  try {
+    const jar = JSON.parse(localStorage.getItem('sis_jar') || '{}')
+    return jar['XSRF-TOKEN'] ? decodeURIComponent(jar['XSRF-TOKEN']) : ''
+  } catch {
+    return ''
+  }
+}
+
 export const saveJar = (resp) => {
-  const newJarStr = resp.headers.get('X-Cookie-Jar');
-  if (!newJarStr) return;
+  const newJarStr = resp.headers.get('X-Cookie-Jar')
+  if (!newJarStr) return
 
   try {
-    const oldJar = JSON.parse(localStorage.getItem('sis_jar') || '{}');
-    const newJar = JSON.parse(newJarStr);
-    const merged = { ...oldJar, ...newJar };
-    localStorage.setItem('sis_jar', JSON.stringify(merged));
+    const oldJar = JSON.parse(localStorage.getItem('sis_jar') || '{}')
+    const newJar = JSON.parse(newJarStr)
+    const merged = { ...oldJar, ...newJar }
+    localStorage.setItem('sis_jar', JSON.stringify(merged))
   } catch (e) {
-    // Fallback if parsing fails
-    localStorage.setItem('sis_jar', newJarStr);
+    localStorage.setItem('sis_jar', newJarStr)
   }
 }
 

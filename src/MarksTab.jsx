@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
-import { getBase, MARKS_API, saveJar } from './api'
+import { getBase, MARKS_API, saveJar, getXsrf, safeParse } from './api'
 import { motion } from 'framer-motion'
 
 export default function MarksTab({ refreshKey, onSessionExpired }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => { load() }, [refreshKey])
 
   const load = async () => {
-    setLoading(true); setError(false)
+    setLoading(true); setError(null)
     try {
       const jarStr = localStorage.getItem('sis_jar') || '{}';
 
@@ -19,6 +19,7 @@ export default function MarksTab({ refreshKey, onSessionExpired }) {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
           'X-Cookie-Jar': jarStr,
+          'X-XSRF-TOKEN': getXsrf(),
         }
       })
       saveJar(resp)
@@ -32,10 +33,10 @@ export default function MarksTab({ refreshKey, onSessionExpired }) {
       const result = { marks, fetchedAt: Date.now() }
       localStorage.setItem('sis_marks_cache', JSON.stringify(result))
       setData(result)
-    } catch {
+    } catch (err) {
+      setError(err.message || 'Synchronization failed')
       const c = localStorage.getItem('sis_marks_cache')
-      if (c) setData(JSON.parse(c))
-      else setError(true)
+      if (c) setData(safeParse(c))
     } finally { setLoading(false) }
   }
 
@@ -70,10 +71,15 @@ export default function MarksTab({ refreshKey, onSessionExpired }) {
           </div>
         )}
         {error && (
-          <div className="pill-error text-center" style={{ padding: 24, borderRadius: 20 }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="pill-error text-center"
+            style={{ padding: 24, borderRadius: 20, marginBottom: 24 }}
+          >
             <p style={{ fontWeight: 700 }}>SYNCHRONIZATION FAILURE</p>
-            <p style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>Check your network gateway status.</p>
-          </div>
+            <p style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>{error.toUpperCase()}</p>
+          </motion.div>
         )}
         {!loading && !error && marks.length === 0 && (
           <div className="text-center" style={{ padding: '60px 20px', opacity: 0.5 }}>

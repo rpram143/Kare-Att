@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getBase, GRADE_PAGE, gradeColor, saveJar } from './api'
+import { getBase, GRADE_PAGE, gradeColor, saveJar, getXsrf, safeParse } from './api'
 import { motion } from 'framer-motion'
 
 function parseCgpaHtml(doc) {
@@ -18,7 +18,7 @@ function parseCgpaHtml(doc) {
   doc.querySelectorAll('table').forEach(table => {
     if (table.id === 's-table') return
     const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim().toLowerCase())
-    if (!headers.some(h => h.includes('semester')) || !headers.some(h => h.includes('grade'))) return
+    if (!(headers.some(h => h.includes('semester')) || headers.some(h => h.includes('grade')))) return
     table.querySelectorAll('tbody tr').forEach(row => {
       const cells = [...row.querySelectorAll('td')].map(c => c.textContent.trim())
       if (cells.length < 6) return
@@ -39,11 +39,12 @@ function parseCgpaHtml(doc) {
 export default function CgpaTab({ refreshKey, onSessionExpired }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => { load() }, [refreshKey])
 
   const load = async () => {
-    setLoading(true)
+    setLoading(true); setError(null)
     try {
       const jarStr = localStorage.getItem('sis_jar') || '{}';
 
@@ -52,6 +53,7 @@ export default function CgpaTab({ refreshKey, onSessionExpired }) {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'text/html,*/*',
           'X-Cookie-Jar': jarStr,
+          'X-XSRF-TOKEN': getXsrf(),
         }
       })
       saveJar(resp)
@@ -65,9 +67,10 @@ export default function CgpaTab({ refreshKey, onSessionExpired }) {
       const result = { ...parseCgpaHtml(doc), fetchedAt: Date.now() }
       localStorage.setItem('sis_cgpa_cache', JSON.stringify(result))
       setData(result)
-    } catch {
+    } catch (err) {
+      setError(err.message || 'Synchronization failed')
       const c = localStorage.getItem('sis_cgpa_cache')
-      if (c) setData(JSON.parse(c))
+      if (c) setData(safeParse(c))
     } finally { setLoading(false) }
   }
 
@@ -111,6 +114,17 @@ export default function CgpaTab({ refreshKey, onSessionExpired }) {
         <h2 className="display-txt" style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Academic Chronology</h2>
         <div style={{ width: 40, height: 1, background: 'var(--border)' }} />
       </div>
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="pill-error text-center"
+          style={{ padding: 16, borderRadius: 16, marginBottom: 24, fontSize: 12, fontWeight: 700 }}
+        >
+          {error.toUpperCase()}
+        </motion.div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {!loading && semesters.length === 0 && (

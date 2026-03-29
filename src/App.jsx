@@ -3,6 +3,7 @@ import LoginScreen from './LoginScreen'
 import AttendanceTab from './AttendanceTab'
 import Logo from './Logo'
 import SplashScreen from './SplashScreen'
+import { safeParse } from './api'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const MarksTab = lazy(() => import('./MarksTab'))
@@ -69,7 +70,7 @@ export default function App() {
     const c = localStorage.getItem('sis_att_cache')
     if (n && c) {
       setStudentName(n)
-      setAttData(JSON.parse(c))
+      setAttData(safeParse(c))
       setLoggedIn(true)
     }
 

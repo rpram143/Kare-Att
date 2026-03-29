@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getBase, LOGIN_PATH } from './api'
+import { getBase, LOGIN_PATH, getXsrf } from './api'
 import Logo from './Logo'
 
 export default function LoginScreen({ onLogin }) {
@@ -33,11 +33,7 @@ export default function LoginScreen({ onLogin }) {
       if (prepJarStr) localStorage.setItem('sis_jar', prepJarStr);
 
       // Attempt to extract XSRF token from the jar for standard POST CSRF protection
-      let xsrf = "";
-      try {
-        const jar = JSON.parse(localStorage.getItem('sis_jar') || '{}');
-        if (jar['XSRF-TOKEN']) xsrf = decodeURIComponent(jar['XSRF-TOKEN']);
-      } catch (e) { /* Best effort: proceed without token if parsing fails */ }
+      const xsrf = getXsrf();
 
       // Step 2: POST credentials with the session cookie
       const resp = await fetch(loginUrl, {

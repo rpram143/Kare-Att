@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DAYS, fmt12, getBase, REG_PAGE, saveJar } from './api'
+import { DAYS, fmt12, getBase, REG_PAGE, saveJar, getXsrf, safeParse } from './api'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // Helper to map SIS slots (e.g., MON1, TUE2) to times
@@ -15,7 +15,7 @@ const SLOT_MAP = {
 }
 
 export default function TimetableTab({ onSessionExpired }) {
-  const [ttData, setTtData] = useState(() => JSON.parse(localStorage.getItem('sis_tt') || '{}'))
+  const [ttData, setTtData] = useState(() => safeParse(localStorage.getItem('sis_tt'), {}))
   const [ttDay, setTtDay] = useState(DAYS[new Date().getDay() - 1] || 'Monday')
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -35,6 +35,7 @@ export default function TimetableTab({ onSessionExpired }) {
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'text/html,*/*',
           'X-Cookie-Jar': jarStr,
+          'X-XSRF-TOKEN': getXsrf(),
         }
       })
       saveJar(resp)

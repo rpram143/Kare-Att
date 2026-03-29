@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getBase, ATTEND_API, MIN_ATT, attClass, saveJar } from './api'
+import { getBase, ATTEND_API, MIN_ATT, attClass, saveJar, getXsrf, safeParse } from './api'
 import { motion } from 'framer-motion'
 
 const BarFill = ({ pct, cls }) => (
@@ -47,10 +47,11 @@ const BarFill = ({ pct, cls }) => (
 
 export default function AttendanceTab({ initData, refreshKey, onSessionExpired }) {
   const [data, setData] = useState(initData)
-  const [loading, setLoading] = useState(!initData)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const load = async () => {
-    setLoading(true)
+    setLoading(true); setError(null)
     try {
       const jarStr = localStorage.getItem('sis_jar') || '{}';
 
@@ -59,6 +60,7 @@ export default function AttendanceTab({ initData, refreshKey, onSessionExpired }
           'X-Requested-With': 'XMLHttpRequest',
           Accept: 'application/json',
           'X-Cookie-Jar': jarStr,
+          'X-XSRF-TOKEN': getXsrf(),
         }
       })
       saveJar(resp)
@@ -79,15 +81,14 @@ export default function AttendanceTab({ initData, refreshKey, onSessionExpired }
       const result = { subjects, fetchedAt: Date.now() }
       localStorage.setItem('sis_att_cache', JSON.stringify(result))
       setData(result)
-    } catch {
+    } catch (err) {
+      setError(err.message || 'Synchronization failed')
       const c = localStorage.getItem('sis_att_cache')
-      if (c) setData(JSON.parse(c))
+      if (c) setData(safeParse(c))
     } finally { setLoading(false) }
   }
 
-  useEffect(() => {
-    if (!initData || refreshKey > 0) load()
-  }, [refreshKey])
+  useEffect(() => { load() }, [refreshKey])
 
   const { subjects = [], fetchedAt } = data || {}
   const totalP = subjects.reduce((a, b) => a + b.present, 0)
@@ -104,6 +105,17 @@ export default function AttendanceTab({ initData, refreshKey, onSessionExpired }
           {loading ? 'CALCULATING…' : overall >= MIN_ATT ? 'REGISTRY STATUS: SAFE' : 'REGISTRY STATUS: CRITICAL'}
         </div>
       </div>
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="pill-error text-center"
+          style={{ padding: 16, borderRadius: 16, marginBottom: 24, fontSize: 12, fontWeight: 700 }}
+        >
+          {error.toUpperCase()}
+        </motion.div>
+      )}
 
       <div className="grid-2 slide-up d2" style={{ marginBottom: 32 }}>
         <div className="stat-card">
